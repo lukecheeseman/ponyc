@@ -1,4 +1,6 @@
 #include "pass.h"
+#include "../ast/parser.h"
+#include "../ast/treecheck.h"
 #include "syntax.h"
 #include "sugar.h"
 #include "scope.h"
@@ -16,6 +18,7 @@
 #include "../ast/parser.h"
 #include "../ast/treecheck.h"
 #include "../codegen/codegen.h"
+#include "../evaluate/evaluate.h"
 #include "../pkg/program.h"
 #include "../plugin/plugin.h"
 #include "../../libponyrt/mem/pool.h"
@@ -60,6 +63,7 @@ const char* pass_name(pass_id pass)
     case PASS_DOCS: return "docs";
     case PASS_REFER: return "refer";
     case PASS_EXPR: return "expr";
+    case PASS_EVALUATE: return "evaluate";
     case PASS_VERIFY: return "verify";
     case PASS_FINALISER: return "final";
     case PASS_SERIALISER: return "serialise";
@@ -271,6 +275,9 @@ static bool ast_passes(ast_t** astp, pass_opt_t* options, pass_id last)
 
   if(is_program)
     plugin_visit_ast(*astp, options, PASS_EXPR);
+
+  if(!visit_pass(astp, options, last, &r, PASS_EVALUATE, NULL, pass_evaluate))
+    return r;
 
   if(!visit_pass(astp, options, last, &r, PASS_VERIFY, NULL, pass_verify))
     return r;

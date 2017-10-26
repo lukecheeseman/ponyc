@@ -9,7 +9,7 @@
 class CompileTimeExpressionTest: public PassTest
 {};
 
-// TODO: in a simlar way to other tests, design the functionality
+// TODO: in a similar way to other tests, design the functionality
 // such that we can unit tests the compile-time expression evaluation
 
 TEST_F(CompileTimeExpressionTest, CompileTimeLiteral)
