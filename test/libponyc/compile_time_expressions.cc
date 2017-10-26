@@ -3,8 +3,8 @@
 #include <type/subtype.h>
 #include "util.h"
 
-#define TEST_COMPILE(src) DO(test_compile(src, "expr"))
-#define TEST_ERROR(src) DO(test_error(src, "expr"))
+#define TEST_TYPE_COMPILE(src) DO(test_compile(src, "expr"))
+#define TEST_TYPE_ERROR(src) DO(test_error(src, "expr"))
 
 class CompileTimeExpressionTest: public PassTest
 {};
@@ -19,7 +19,7 @@ TEST_F(CompileTimeExpressionTest, CompileTimeLiteral)
     "  new create(env: Env) =>\n"
     "    let x: Bool = # true";
 
-  TEST_COMPILE(src);
+  TEST_TYPE_COMPILE(src);
 }
 
 TEST_F(CompileTimeExpressionTest, CompileTimeLiteralTypeInference)
@@ -29,7 +29,7 @@ TEST_F(CompileTimeExpressionTest, CompileTimeLiteralTypeInference)
     "  new create(env: Env) =>\n"
     "    let x: U32 = # 3";
 
-  TEST_COMPILE(src);
+  TEST_TYPE_COMPILE(src);
 }
 
 TEST_F(CompileTimeExpressionTest, CompileTimeExpression)
@@ -40,7 +40,7 @@ TEST_F(CompileTimeExpressionTest, CompileTimeExpression)
     "    let x: Bool = # (true or false)";
 
   set_builtin(NULL);
-  TEST_COMPILE(src);
+  TEST_TYPE_COMPILE(src);
 }
 
 TEST_F(CompileTimeExpressionTest, CompileTimeVariable)
@@ -50,7 +50,7 @@ TEST_F(CompileTimeExpressionTest, CompileTimeVariable)
     "  new create(env: Env) =>\n"
     "    let x: U32 = # (let y: U32 = 3; y)";
 
-  TEST_COMPILE(src);
+  TEST_TYPE_COMPILE(src);
 }
 
 TEST_F(CompileTimeExpressionTest, CompileTimeVariableScope)
@@ -61,5 +61,5 @@ TEST_F(CompileTimeExpressionTest, CompileTimeVariableScope)
     "    let x: U32 = # (let y: U32 = 3; y)\n"
     "    let z: U32 = y";
 
-  TEST_ERROR(src);
+  TEST_TYPE_ERROR(src);
 }
