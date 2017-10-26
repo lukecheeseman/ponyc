@@ -43,7 +43,7 @@ TEST_F(CompileTimeExpressionTest, CompileTimeExpression)
   TEST_COMPILE(src);
 }
 
-TEST_F(CompileTimeExpressionTest, DISABLED_CompileTimeVariable)
+TEST_F(CompileTimeExpressionTest, CompileTimeVariable)
 {
   const char* src =
     "actor Main\n"
@@ -53,7 +53,7 @@ TEST_F(CompileTimeExpressionTest, DISABLED_CompileTimeVariable)
   TEST_COMPILE(src);
 }
 
-TEST_F(CompileTimeExpressionTest, DISABLED_CompileTimeVariableScope)
+TEST_F(CompileTimeExpressionTest, CompileTimeVariableScope)
 {
   const char* src =
     "actor Main\n"

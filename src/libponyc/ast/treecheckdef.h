@@ -480,8 +480,9 @@ RULE(param_ref,
   TK_PARAMREF);
 
 RULE(constant_expr,
+  IS_SCOPE
   HAS_TYPE(type)
-  CHILD(expr), // Compile-time expression
+  CHILD(expr),
   TK_CONSTANT);
 
 
