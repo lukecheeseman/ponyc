@@ -22,16 +22,6 @@ TEST_F(CompileTimeExpressionTest, CompileTimeLiteral)
   TEST_COMPILE(src);
 }
 
-TEST_F(CompileTimeExpressionTest, CompileTimeExpression)
-{
-  const char* src =
-    "actor Main\n"
-    "  new create(env: Env) =>\n"
-    "    let x: U32 = # (true or false)";
-
-  TEST_COMPILE(src);
-}
-
 TEST_F(CompileTimeExpressionTest, CompileTimeLiteralTypeInference)
 {
   const char* src =
@@ -42,7 +32,18 @@ TEST_F(CompileTimeExpressionTest, CompileTimeLiteralTypeInference)
   TEST_COMPILE(src);
 }
 
-TEST_F(CompileTimeExpressionTest, CompileTimeVariable)
+TEST_F(CompileTimeExpressionTest, CompileTimeExpression)
+{
+  const char* src =
+    "actor Main\n"
+    "  new create(env: Env) =>\n"
+    "    let x: Bool = # (true or false)";
+
+  set_builtin(NULL);
+  TEST_COMPILE(src);
+}
+
+TEST_F(CompileTimeExpressionTest, DISABLED_CompileTimeVariable)
 {
   const char* src =
     "actor Main\n"
@@ -52,7 +53,7 @@ TEST_F(CompileTimeExpressionTest, CompileTimeVariable)
   TEST_COMPILE(src);
 }
 
-TEST_F(CompileTimeExpressionTest, CompileTimeVariableScope)
+TEST_F(CompileTimeExpressionTest, DISABLED_CompileTimeVariableScope)
 {
   const char* src =
     "actor Main\n"

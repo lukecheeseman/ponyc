@@ -145,7 +145,7 @@ GROUP(expr,
   lambda, barelambda, array_literal, object_literal, int_literal, float_literal,
   string, bool_literal, id, rawseq, package_ref, location,
   this_ref, ref, fun_ref, type_ref, field_ref, tuple_elem_ref, local_ref,
-  param_ref);
+  param_ref, constant_expr);
 
 RULE(local,
   HAS_TYPE(type)
@@ -478,6 +478,11 @@ RULE(param_ref,
   HAS_DATA // Parameter definition
   CHILD(id),
   TK_PARAMREF);
+
+RULE(constant_expr,
+  HAS_TYPE(type)
+  CHILD(expr), // Compile-time expression
+  TK_CONSTANT);
 
 
 GROUP(type,

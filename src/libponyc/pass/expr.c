@@ -1,4 +1,5 @@
 #include "expr.h"
+#include "../evaluate/evaluate.h"
 #include "../expr/literal.h"
 #include "../expr/reference.h"
 #include "../expr/operator.h"
@@ -630,7 +631,10 @@ ast_result_t pass_expr(ast_t** astp, pass_opt_t* options)
       break;
 
     case TK_FFICALL:
-      r = expr_ffi(options, ast);
+      r = expr_ffi(options, ast); break;
+
+    case TK_CONSTANT:
+      r = expr_constant(options, ast); break;
 
     default: {}
   }

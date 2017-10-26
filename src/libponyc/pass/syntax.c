@@ -1418,12 +1418,6 @@ ast_result_t pass_syntax(ast_t** astp, pass_opt_t* options)
       r = AST_ERROR;
       break;
 
-    case TK_CONSTANT:
-      ast_error(options->check.errors, ast,
-        "Compile time expressions not yet supported");
-      r = AST_ERROR;
-      break;
-
     case TK_AS:         r = syntax_as(options, ast); break;
 
     default: break;
