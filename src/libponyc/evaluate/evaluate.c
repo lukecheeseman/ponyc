@@ -13,15 +13,16 @@ bool expr_constant(pass_opt_t* opt, ast_t* ast)
   return true;
 }
 
-static ast_t* evaluate(pass_opt_t* opt, ast_t* ast)
+static ast_t* evaluate(pass_opt_t* opt, ast_t* expression)
 {
-  (void) opt;
-  pony_assert(ast_id(ast) == TK_CONSTANT);
-  ast_t* expression = ast_child(ast);
+  pony_assert(expression != NULL);
 
-  // Get the expression to evaluate
   switch (ast_id(expression))
   {
+    // Get and evaluate the inner expression
+    case TK_CONSTANT:
+      return evaluate(opt, ast_child(expression));
+
     // Literal cases where we can return the value
     case TK_NONE:
     case TK_TRUE:
@@ -32,8 +33,13 @@ static ast_t* evaluate(pass_opt_t* opt, ast_t* ast)
     case TK_STRING:
       return expression;
 
-    case TK_CALL:
-      pony_assert(0);
+    case TK_SEQ:
+    {
+      ast_t* evaluated = NULL;
+      for(ast_t* p = ast_child(expression); p != NULL; p = ast_sibling(p))
+        evaluated = evaluate(opt, p);
+      return evaluated;
+    }
 
     default:
       ast_error(opt->check.errors, expression,
@@ -42,11 +48,11 @@ static ast_t* evaluate(pass_opt_t* opt, ast_t* ast)
       ast_error_continue(opt->check.errors, expression,
         "unsupported expressions token was %s", lexer_print(ast_id(expression)));
 #endif
-      return ast;
+      return expression;
   }
 
   pony_assert(0);
-  return ast;
+  return expression;
 }
 
 ast_result_t pass_evaluate(ast_t** astp, pass_opt_t* options)

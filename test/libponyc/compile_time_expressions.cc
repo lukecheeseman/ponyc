@@ -10,9 +10,6 @@
 class CompileTimeExpressionTest: public PassTest
 {};
 
-// TODO: in a similar way to other tests, design the functionality
-// such that we can unit tests the compile-time expression evaluation
-
 TEST_F(CompileTimeExpressionTest, CompileTimeLiteral)
 {
   const char* src =
@@ -32,6 +29,17 @@ TEST_F(CompileTimeExpressionTest, CompileTimeLiteralTypeInference)
 
   TEST_EVALUATE_COMPILE(src);
 }
+
+TEST_F(CompileTimeExpressionTest, CompileTimeSequenceOfLiterals)
+{
+  const char* src =
+    "actor Main\n"
+    "  new create(env: Env) =>\n"
+    "    let x: Bool = # (true; false; true)";
+
+  TEST_TYPE_COMPILE(src);
+}
+
 
 TEST_F(CompileTimeExpressionTest, CompileTimeExpression)
 {
