@@ -13,16 +13,15 @@ bool expr_constant(pass_opt_t* opt, ast_t* ast)
   return true;
 }
 
-static ast_t* evaluate(pass_opt_t* opt, ast_t* expression, bool* eval_error)
+static bool evaluate(pass_opt_t* opt, ast_t* expression, ast_t** result)
 {
   pony_assert(expression != NULL);
-  *eval_error = false;
 
   switch (ast_id(expression))
   {
     // Get and evaluate the inner expression
     case TK_CONSTANT:
-      return evaluate(opt, ast_child(expression), eval_error);
+      return evaluate(opt, ast_child(expression), result);
 
     // Literal cases where we can return the value
     case TK_NONE:
@@ -36,29 +35,28 @@ static ast_t* evaluate(pass_opt_t* opt, ast_t* expression, bool* eval_error)
 
     case TK_SEQ:
     {
-      ast_t* evaluated = NULL;
+      ast_t* evaluated;
       for(ast_t* p = ast_child(expression); p != NULL; p = ast_sibling(p))
       {
-        evaluated = evaluate(opt, p, eval_error);
-        if(*eval_error)
-          return evaluated;
+        if(!evaluate(opt, p, &evaluated))
+          return false;;
       }
-      return evaluated;
+      *result = evaluated;
+      return true;
     }
 
     default:
-      *eval_error = true;
       ast_error(opt->check.errors, expression,
         "expression was not a compile-time expression");
 #ifdef DEBUG
       ast_error_continue(opt->check.errors, expression,
         "unsupported expression token was %s", lexer_print(ast_id(expression)));
 #endif
-      return expression;
+      return false;
   }
 
   pony_assert(0);
-  return expression;
+  return false;
 }
 
 ast_result_t pass_evaluate(ast_t** astp, pass_opt_t* options)
@@ -68,14 +66,13 @@ ast_result_t pass_evaluate(ast_t** astp, pass_opt_t* options)
   // TODO: At some point, we will need to consider mapping assignments
   if (ast_id(ast) == TK_CONSTANT)
   {
-    bool error;
-    ast_t* evaluated = evaluate(options, ast, &error);
-    if (error)
+    ast_t* result;
+    if (!evaluate(options, ast, &result))
     {
       pony_assert(errors_get_count(options->check.errors) > 0);
       return AST_ERROR;
     }
-    ast_replace(astp, evaluated);
+    ast_replace(astp, result);
   }
 
   return AST_OK;
