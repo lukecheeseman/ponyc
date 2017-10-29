@@ -23,6 +23,7 @@ use capsicum = "capsicum"
 use cli = "cli"
 use collections = "collections"
 use collections_persistent = "collections/persistent"
+use compile_time_expressions_test = "compile_time_expressions_test"
 use crypto = "crypto"
 use debug = "debug"
 use files = "files"
@@ -60,6 +61,7 @@ actor Main is TestList
     bureaucracy.Main.make().tests(test)
     collections.Main.make().tests(test)
     collections_persistent.Main.make().tests(test)
+    compile_time_expressions_test.Main.make().tests(test)
     crypto.Main.make().tests(test)
     files.Main.make().tests(test)
     format.Main.make().tests(test)

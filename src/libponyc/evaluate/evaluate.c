@@ -46,7 +46,7 @@ static ast_t* evaluate(pass_opt_t* opt, ast_t* expression)
         "expression interpeter does not support this expression");
 #ifdef DEBUG
       ast_error_continue(opt->check.errors, expression,
-        "unsupported expressions token was %s", lexer_print(ast_id(expression)));
+        "unsupported expression token was %s", lexer_print(ast_id(expression)));
 #endif
       return expression;
   }
