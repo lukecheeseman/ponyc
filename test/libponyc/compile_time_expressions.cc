@@ -5,7 +5,7 @@
 
 #define TEST_EVALUATE_COMPILE(src) DO(test_compile(src, "evaluate"))
 #define TEST_TYPE_COMPILE(src) DO(test_compile(src, "expr"))
-#define TEST_TYPE_ERROR(src) DO(test_error(src, "expr"))
+#define TEST_ERROR(src) DO(test_error(src, "evaluate"))
 
 class CompileTimeExpressionTest: public PassTest
 {};
@@ -70,5 +70,28 @@ TEST_F(CompileTimeExpressionTest, CompileTimeVariableScope)
     "    let x: U32 = # (let y: U32 = 3; y)\n"
     "    let z: U32 = y";
 
-  TEST_TYPE_ERROR(src);
+  TEST_ERROR(src);
+}
+
+TEST_F(CompileTimeExpressionTest, CompileTimeExpressionAssignedToLetAndUsed)
+{
+  const char* src =
+    "actor Main\n"
+    "  new create(env: Env) =>\n"
+    "    let x: U32 = # 2\n"
+    "    let y: U32 = # x";
+
+  TEST_EVALUATE_COMPILE(src);
+}
+
+TEST_F(CompileTimeExpressionTest, CompileTimeExpressionAssignedToVarAndUsed)
+{
+  const char* src =
+    "actor Main\n"
+    "  new create(env: Env) =>\n"
+    "    let x: U32 = # 2\n"
+    "    var y: U32 = # x\n"
+    "    let z: U32 = # y";
+
+  TEST_ERROR(src);
 }
