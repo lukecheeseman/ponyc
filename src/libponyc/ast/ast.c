@@ -1136,20 +1136,24 @@ bool ast_set(ast_t* ast, const char* name, ast_t* value, sym_status_t status,
   return symtab_add(ast->symtab, name, value, status);
 }
 
+// If the old value is not of interest, NULL can be passed in as prev
 bool ast_setvalue(ast_t* ast, const char* name, ast_t* value, ast_t** prev)
 {
   // First search to see if we have a definition of this ast in this, or any,
   // enclosing scope. If we find one, assign it to prev and write in the new
   // value.
   ast_t* scope = ast;
+  ast_t* symtab_prev;
   do
   {
     if(ast->symtab != NULL)
     {
       sym_status_t status2;
-      *prev = (ast_t*)symtab_find_value(scope->symtab, name, &status2);
-      if(*prev != NULL)
+      symtab_prev = (ast_t*)symtab_find_value(scope->symtab, name, &status2);
+      if(symtab_prev != NULL)
       {
+        if(prev != NULL)
+          *prev = symtab_prev;
         symtab_set_value(scope->symtab, name, value);
         return true;
       }
@@ -1159,7 +1163,9 @@ bool ast_setvalue(ast_t* ast, const char* name, ast_t* value, ast_t** prev)
   } while((scope != NULL) && (token_get_id(scope->t) != TK_PROGRAM));
 
   // If no previous definition was found, then create a new mapping.
-  *prev = NULL;
+  if(prev != NULL)
+    *prev = NULL;
+
   scope = ast;
   while(scope->symtab == NULL)
     scope = scope->parent;

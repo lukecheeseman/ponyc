@@ -153,7 +153,6 @@ ast_result_t pass_evaluate(ast_t** astp, pass_opt_t* options)
 {
   ast_t* ast = *astp;
 
-  // TODO: At some point, we will need to consider mapping assignments
   if(ast_id(ast) == TK_CONSTANT)
   {
     ast_t* result;
@@ -163,6 +162,15 @@ ast_result_t pass_evaluate(ast_t** astp, pass_opt_t* options)
       return AST_ERROR;
     }
     ast_replace(astp, result);
+
+    ast = *astp;
+    if(ast_id(ast_parent(ast)) == TK_ASSIGN)
+    {
+      ast_t* left = ast_previous(ast);
+      const char* name = ast_name(ast_child(left));
+
+      return ast_setvalue(left, name, ast, NULL);
+    }
   }
 
   return AST_OK;

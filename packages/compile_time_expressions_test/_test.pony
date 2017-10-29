@@ -15,6 +15,7 @@ actor Main is TestList
     test(_TestArithmetic)
     test(_TestChainedArithmetic)
     test(_TestCompileTimeAssignment)
+    test(_TestCompileTimeVariable)
     /*
     test(_TestBitwise)
     test(_TestIntegerEquivalence)
@@ -25,7 +26,6 @@ actor Main is TestList
     test(_TestCompileTimeObjectField)
     test(_TestCompileTimeObjectMethod)
     test(_TestCompileTimeObjectEmbeddedField)
-    test(_TestCompileTimeVariable)
     test(_TestCompileTimeWhileLoop)
     test(_TestCompileTimeScoping)
     test(_TestCompileTimeTuples)
@@ -95,6 +95,15 @@ class iso _TestCompileTimeAssignment is UnitTest
     h.assert_eq[U32](#(let y: U32 = 4; y * 2), 8)
     h.assert_eq[U32](#(var y: U32 = 4; y = y * 2; y), 8)
     h.assert_eq[U32](#(var y: U32 = 4; y = y * 2; y + 4), 12)
+
+class iso _TestCompileTimeVariable is UnitTest
+
+  fun name(): String => "CompileTimeExpression/CompileTimeVariable"
+
+  fun apply(h: TestHelper) =>
+    let x: U32 = # (1 + 2)
+    let y: U32 = # (x * 2)
+    h.assert_eq[U32]((1+2)*2, # y)
 
 /*
 class iso _TestBitwise is UnitTest
@@ -251,18 +260,6 @@ class iso _TestCompileTimeObjectEmbeddedField is UnitTest
     let static_f = #(ClassWithEmbeddedField(2123).ef.f)
     let dynamic_f = ClassWithEmbeddedField(2123).ef.f
     h.assert_eq[U32](static_f, dynamic_f)
-
-class iso _TestCompileTimeVariable is UnitTest
-
-  fun name(): String => "CompileTimeExpression/CompileTimeVariable"
-
-  fun apply(h: TestHelper) =>
-    let x: U32 = # (1 + 2)
-    let y: U32 = # (x * 2)
-    h.assert_eq[U32]((1+2)*2, # y)
-
-    let c = # ClassWithField(79)
-    h.assert_eq[U32](c.f, # c.f)
 
 class iso _TestCompileTimeWhileLoop is UnitTest
 
