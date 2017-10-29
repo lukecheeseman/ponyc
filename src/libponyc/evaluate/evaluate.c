@@ -65,6 +65,35 @@ static bool evaluate(pass_opt_t* opt, ast_t* expression, ast_t** result)
       *result = expression;
       return true;
 
+    // Evaluating a destructive read
+    case TK_ASSIGN:
+    {
+      AST_GET_CHILDREN(expression, left, right);
+
+      ast_t* evaluated_right;
+      if(!evaluate(opt, right, &evaluated_right))
+        return false;
+
+      const char* name = ast_name(ast_child(left));
+      return ast_setvalue(left, name, evaluated_right, result);
+    }
+
+    // Variable lookups, checking that the variable has been mapped to a value.
+    case TK_VARREF:
+    case TK_PARAMREF:
+    case TK_LETREF:
+    {
+      *result = ast_getvalue(expression, ast_name(ast_child(expression)));
+      if(*result == NULL)
+      {
+        ast_error(opt->check.errors, expression,
+          "variable is not a compile-time expression");
+        return false;
+      }
+
+      return true;
+    }
+
     // Iterate through the sequence and evaluate in order, bailing if we error
     // or returning the last result
     case TK_SEQ:
@@ -125,10 +154,10 @@ ast_result_t pass_evaluate(ast_t** astp, pass_opt_t* options)
   ast_t* ast = *astp;
 
   // TODO: At some point, we will need to consider mapping assignments
-  if (ast_id(ast) == TK_CONSTANT)
+  if(ast_id(ast) == TK_CONSTANT)
   {
     ast_t* result;
-    if (!evaluate(options, ast, &result))
+    if(!evaluate(options, ast, &result))
     {
       pony_assert(errors_get_count(options->check.errors) > 0);
       return AST_ERROR;

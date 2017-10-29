@@ -89,7 +89,7 @@ bool symtab_add(symtab_t* symtab, const char* name, ast_t* def,
 
   if(no_case != name)
   {
-    symbol_t s1 = {no_case, def, SYM_NOCASE, 0};
+    symbol_t s1 = {no_case, def, SYM_NOCASE, 0, NULL};
     size_t index = HASHMAP_UNKNOWN;
     symbol_t* s2 = symtab_get(symtab, &s1, &index);
 
@@ -101,7 +101,7 @@ bool symtab_add(symtab_t* symtab, const char* name, ast_t* def,
     symtab_putindex(symtab, sym_dup(&s1), index);
   }
 
-  symbol_t s1 = {name, def, status, 0};
+  symbol_t s1 = {name, def, status, 0, NULL};
   size_t index = HASHMAP_UNKNOWN;
   symbol_t* s2 = symtab_get(symtab, &s1, &index);
 
@@ -114,9 +114,9 @@ bool symtab_add(symtab_t* symtab, const char* name, ast_t* def,
   return true;
 }
 
-ast_t* symtab_find(symtab_t* symtab, const char* name, sym_status_t* status)
+static symbol_t* symtab_find_symbol(symtab_t* symtab, const char* name, sym_status_t* status)
 {
-  symbol_t s1 = {name, NULL, SYM_NONE, 0};
+  symbol_t s1 = {name, NULL, SYM_NONE, 0, NULL};
   size_t index = HASHMAP_UNKNOWN;
   symbol_t* s2 = symtab_get(symtab, &s1, &index);
 
@@ -128,7 +128,7 @@ ast_t* symtab_find(symtab_t* symtab, const char* name, sym_status_t* status)
     if(s2->status == SYM_NOCASE)
       return NULL;
 
-    return s2->def;
+    return s2;
   }
 
   if(status != NULL)
@@ -137,12 +137,34 @@ ast_t* symtab_find(symtab_t* symtab, const char* name, sym_status_t* status)
   return NULL;
 }
 
+ast_t* symtab_find(symtab_t* symtab, const char* name, sym_status_t* status)
+{
+  symbol_t* s = symtab_find_symbol(symtab, name, status);
+  return s == NULL ? NULL : s->def;
+}
+
+ast_t* symtab_find_value(symtab_t* symtab, const char* name, sym_status_t* status)
+{
+  symbol_t* s = symtab_find_symbol(symtab, name, status);
+  return s == NULL ? NULL : s->value;
+}
+
+bool symtab_set_value(symtab_t* symtab, const char* name, ast_t* value)
+{
+  symbol_t* s = symtab_find_symbol(symtab, name, NULL);
+  if(s == NULL)
+    return false;
+
+  s->value = value;
+  return true;
+}
+
 ast_t* symtab_find_case(symtab_t* symtab, const char* name,
   sym_status_t* status)
 {
   // Same as symtab_get, but is partially case insensitive. That is, type names
   // are compared as uppercase and other symbols are compared as lowercase.
-  symbol_t s1 = {name, NULL, SYM_NONE, 0};
+  symbol_t s1 = {name, NULL, SYM_NONE, 0, NULL};
   size_t index = HASHMAP_UNKNOWN;
   symbol_t* s2 = symtab_get(symtab, &s1, &index);
 
@@ -167,7 +189,7 @@ ast_t* symtab_find_case(symtab_t* symtab, const char* name,
 
 void symtab_set_status(symtab_t* symtab, const char* name, sym_status_t status)
 {
-  symbol_t s1 = {name, NULL, status, 0};
+  symbol_t s1 = {name, NULL, status, 0, NULL};
   size_t index = HASHMAP_UNKNOWN;
   symbol_t* s2 = symtab_get(symtab, &s1, &index);
 

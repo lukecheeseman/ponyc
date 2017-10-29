@@ -13,7 +13,8 @@ actor Main is TestList
     test(_TestSeq)
     test(_TestNegation)
     test(_TestArithmetic)
-    test(_TestChainedArithemtic)
+    test(_TestChainedArithmetic)
+    test(_TestCompileTimeAssignment)
     /*
     test(_TestBitwise)
     test(_TestIntegerEquivalence)
@@ -71,7 +72,7 @@ class iso _TestArithmetic is UnitTest
     h.assert_eq[U32](#(42 * 8), 42 * 8)
     h.assert_eq[U32](#(42 / 8), 42 / 8)
 
-class iso _TestChainedArithemtic is UnitTest
+class iso _TestChainedArithmetic is UnitTest
 
   fun name(): String => "CompileTimeExpression/ChainedArithmetic"
 
@@ -84,6 +85,16 @@ class iso _TestChainedArithemtic is UnitTest
     h.assert_eq[I32](#(2 + -1), 2 + -1)
     h.assert_eq[I32](#(-1 - -1), -1 - -1)
     h.assert_eq[I32](#(-1 - 1), -1 - 1)
+
+class iso _TestCompileTimeAssignment is UnitTest
+
+  fun name(): String => "CompileTimeExpression/CompileTimeAssignment"
+
+  fun apply(h: TestHelper) =>
+    h.assert_eq[U32](#(let y: U32 = 4; y), 4)
+    h.assert_eq[U32](#(let y: U32 = 4; y * 2), 8)
+    h.assert_eq[U32](#(var y: U32 = 4; y = y * 2; y), 8)
+    h.assert_eq[U32](#(var y: U32 = 4; y = y * 2; y + 4), 12)
 
 /*
 class iso _TestBitwise is UnitTest
