@@ -9,7 +9,8 @@ actor Main is TestList
   new make() => None
 
   fun tag tests(test: PonyTest) =>
-    test(_TestLitarals)
+    test(_TestLiterals)
+    test(_TestSeq)
     /*
     test(_TestNegation)
     test(_TestArithmetic)
@@ -29,9 +30,9 @@ actor Main is TestList
     test(_TestCompileTimeTuples)
     */
 
-class iso _TestLitarals is UnitTest
+class iso _TestLiterals is UnitTest
 
-  fun name(): String => "CompileTimeExpression/Negation"
+  fun name(): String => "CompileTimeExpression/Literals"
 
   fun apply(h: TestHelper) =>
     h.assert_eq[U32](# 1, 1)
@@ -40,6 +41,15 @@ class iso _TestLitarals is UnitTest
     h.assert_eq[I64](# 42, 42)
     h.assert_eq[Bool](# true, true)
     h.assert_eq[Bool](# false, false)
+
+
+class iso _TestSeq is UnitTest
+
+  fun name(): String => "CompileTimeExpression/Seq"
+
+  fun apply(h: TestHelper) =>
+    h.assert_eq[Bool](# (true; false; false), (true; false; false))
+    h.assert_eq[Bool](# (true; true), (true; true))
 
 /*
 class iso _TestNegation is UnitTest
