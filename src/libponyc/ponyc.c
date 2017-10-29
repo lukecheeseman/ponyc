@@ -1,10 +1,13 @@
 #include "ponyc.h"
 #include "ast/error.h"
 #include "codegen/codegen.h"
+#include "evaluate/evaluate.h"
 #include "pkg/package.h"
 
 bool ponyc_init(pass_opt_t* options)
 {
+  evaluate_init(options);
+
   if(!codegen_llvm_init())
     return false;
 

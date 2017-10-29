@@ -11,10 +11,10 @@ actor Main is TestList
   fun tag tests(test: PonyTest) =>
     test(_TestLiterals)
     test(_TestSeq)
-    /*
     test(_TestNegation)
     test(_TestArithmetic)
     test(_TestChainedArithemtic)
+    /*
     test(_TestBitwise)
     test(_TestIntegerEquivalence)
     test(_TestIntegerToIntegerTypeCast)
@@ -51,7 +51,6 @@ class iso _TestSeq is UnitTest
     h.assert_eq[Bool](# (true; false; false), (true; false; false))
     h.assert_eq[Bool](# (true; true), (true; true))
 
-/*
 class iso _TestNegation is UnitTest
 
   fun name(): String => "CompileTimeExpression/Negation"
@@ -59,7 +58,6 @@ class iso _TestNegation is UnitTest
   fun apply(h: TestHelper) =>
     h.assert_eq[U32](#(-1), -1)
     h.assert_eq[I32](#(-1), -1)
-    h.assert_eq[I32](#(42 - 78), 42 - 78)
 
 class iso _TestArithmetic is UnitTest
   """
@@ -69,6 +67,7 @@ class iso _TestArithmetic is UnitTest
 
   fun apply(h: TestHelper) =>
     h.assert_eq[U32](#(42 + 8), 42 + 8)
+    h.assert_eq[U32](#(42 - 8), 42 - 8)
     h.assert_eq[U32](#(42 * 8), 42 * 8)
     h.assert_eq[U32](#(42 / 8), 42 / 8)
 
@@ -86,6 +85,7 @@ class iso _TestChainedArithemtic is UnitTest
     h.assert_eq[I32](#(-1 - -1), -1 - -1)
     h.assert_eq[I32](#(-1 - 1), -1 - 1)
 
+/*
 class iso _TestBitwise is UnitTest
 
   fun name(): String => "CompileTimeExpression/U64Bitwise"

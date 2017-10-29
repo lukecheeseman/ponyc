@@ -19,6 +19,7 @@
 #include "../ast/treecheck.h"
 #include "../codegen/codegen.h"
 #include "../evaluate/evaluate.h"
+#include "../evaluate/method_table.h"
 #include "../pkg/program.h"
 #include "../plugin/plugin.h"
 #include "../../libponyrt/mem/pool.h"
