@@ -44,6 +44,46 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* expression,
   return false;
 }
 
+/* Construct a mapping from the given lhs identifier to the rhs value. This
+ * method assumes that all mappings are valid, the method is provided as a
+ * convenience to extract the identifier name
+ */
+static bool assign_value(pass_opt_t* opt, ast_t* left, ast_t* right,
+  ast_t** result)
+{
+  (void) opt;
+  pony_assert(left != NULL);
+  pony_assert(right != NULL);
+
+  switch(ast_id(left))
+  {
+    case TK_VAR:
+    case TK_VARREF:
+    case TK_LET:
+      return ast_setvalue(left, ast_name(ast_child(left)), right, result);
+
+    default:
+      pony_assert(0);
+  }
+
+  return false;
+}
+
+// Bind a value so that it can be used in later compile-time expressions
+static bool bind_value(pass_opt_t* opt, ast_t* left, ast_t* right,
+  ast_t** result)
+{
+  (void) opt;
+  pony_assert(left != NULL);
+  pony_assert(right != NULL);
+
+  token_id left_id = ast_id(left);
+  if(left_id == TK_VAR || left_id == TK_VARREF)
+    return false;
+
+  return assign_value(opt, left, right, result);
+}
+
 static bool evaluate(pass_opt_t* opt, ast_t* expression, ast_t** result)
 {
   pony_assert(expression != NULL);
@@ -71,14 +111,12 @@ static bool evaluate(pass_opt_t* opt, ast_t* expression, ast_t** result)
       AST_GET_CHILDREN(expression, left, right);
 
       ast_t* evaluated_right;
-      if(!evaluate(opt, right, &evaluated_right))
-        return false;
-
-      const char* name = ast_name(ast_child(left));
-      return ast_setvalue(left, name, evaluated_right, result);
+      return evaluate(opt, right, &evaluated_right) &&
+             assign_value(opt, left, evaluated_right, result);
     }
 
-    // Variable lookups, checking that the variable has been mapped to a value.
+    // Variable lookups, checking that the variable has been bound to a value.
+    // A missing binding means that the variable is not a compile-time variable.
     case TK_VARREF:
     case TK_PARAMREF:
     case TK_LETREF:
@@ -167,9 +205,8 @@ ast_result_t pass_evaluate(ast_t** astp, pass_opt_t* options)
     if(ast_id(ast_parent(ast)) == TK_ASSIGN)
     {
       ast_t* left = ast_previous(ast);
-      const char* name = ast_name(ast_child(left));
-
-      return ast_setvalue(left, name, ast, NULL);
+      if(!bind_value(options, left, ast, NULL))
+        return AST_ERROR;
     }
   }
 
