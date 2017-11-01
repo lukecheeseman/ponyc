@@ -1,6 +1,5 @@
 #include "method_table.h"
-#include "builtin_int.h"
-#include "builtin_bool.h"
+#include "builtin.h"
 #include "../../type/subtype.h"
 #include "../../../libponyrt/mem/pool.h"
 #include "../../../libponyrt/ds/hash.h"
@@ -43,10 +42,10 @@ static void methodtab_add(const char* name, const char* type, method_ptr_t metho
 // Builds the method lookup table for the supported builting operations
 void methodtab_init()
 {
-  // TODO: rename to real?
-  // integer operations
   method_table_init(&method_table, 20);
   methodtab_add(stringtab("integer"), stringtab("create"), &int_create);
+  methodtab_add(stringtab("integer"), stringtab("min_value"), &int_min_value);
+  methodtab_add(stringtab("integer"), stringtab("max_value"), &int_max_value);
 
   methodtab_add(stringtab("integer"), stringtab("add"), &int_add);
   methodtab_add(stringtab("integer"), stringtab("sub"), &int_sub);
@@ -61,9 +60,15 @@ void methodtab_init()
   methodtab_add(stringtab("integer"), stringtab("gt"), &int_gt);
   methodtab_add(stringtab("integer"), stringtab("ge"), &int_ge);
 
+  /*
+  methodtab_add(stringtab("integer"), stringtab("min"), &int_min);
+  methodtab_add(stringtab("integer"), stringtab("max"), &int_max);
+  */
+
   methodtab_add(stringtab("integer"), stringtab("op_and"), &int_and);
   methodtab_add(stringtab("integer"), stringtab("op_or"), &int_or);
   methodtab_add(stringtab("integer"), stringtab("op_xor"), &int_xor);
+  /*
   methodtab_add(stringtab("integer"), stringtab("op_not"), &int_not);
   methodtab_add(stringtab("integer"), stringtab("shl"), &int_shl);
   methodtab_add(stringtab("integer"), stringtab("shr"), &int_shr);
@@ -83,20 +88,9 @@ void methodtab_init()
   methodtab_add(stringtab("integer"), stringtab("u128"), &int_u128);
   methodtab_add(stringtab("integer"), stringtab("ulong"), &int_ulong);
   methodtab_add(stringtab("integer"), stringtab("usize"), &int_usize);
-
-  /*
   methodtab_add(stringtab("integer"), stringtab("f32"), &int_f32);
   methodtab_add(stringtab("integer"), stringtab("f64"), &int_f64);
   */
-
-  //TODO: make the type names consistent in case
-  // boolean operations
-  methodtab_add(stringtab("Bool"), stringtab("eq"), &bool_eq);
-  methodtab_add(stringtab("Bool"), stringtab("ne"), &bool_ne);
-  methodtab_add(stringtab("Bool"), stringtab("op_and"), &bool_and);
-  methodtab_add(stringtab("Bool"), stringtab("op_or"), &bool_or);
-  methodtab_add(stringtab("Bool"), stringtab("op_xor"), &bool_xor);
-  methodtab_add(stringtab("Bool"), stringtab("op_not"), &bool_not);
 }
 
 method_ptr_t methodtab_lookup(ast_t* receiver, ast_t* type,

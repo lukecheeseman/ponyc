@@ -17,10 +17,10 @@ actor Main is TestList
     test(_TestCompileTimeAssignment)
     test(_TestCompileTimeVariable)
     test(_TestIntegerEquivalence)
+    /*
     test(_TestIntegerBitwise)
     test(_TestIntegerToIntegerTypeCast)
     test(_TestBoolLogicalOperations)
-    /*
     test(_TestFunctionCall)
     test(_TestFunctionCallNamedArgs)
     test(_TestCompileTimeObjectField)
@@ -153,6 +153,7 @@ class iso _TestIntegerEquivalence is UnitTest
     h.assert_true(#(I32(-7) <= I32(-1)))
     h.assert_true(#(I32(1) <= -I32(-1)))
 
+/*
 class iso _TestIntegerBitwise is UnitTest
 
   fun name(): String => "CompileTimeExpression/IntegerBitwise"
@@ -274,7 +275,6 @@ class iso _TestBoolLogicalOperations is UnitTest
     h.assert_true((# (true != false)))
     h.assert_false((# (true != true)))
 
-/*
 class iso _TestFunctionCall is UnitTest
 
   fun name(): String => "CompileTimeExpression/fib"
