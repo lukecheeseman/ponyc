@@ -55,6 +55,20 @@ double lexint_double(lexint_t* i);
 
 void lexint_negate(lexint_t* dst, lexint_t* src);
 
+void lexint_and(lexint_t* dst, lexint_t* a, lexint_t* b);
+
+void lexint_and64(lexint_t* dst, lexint_t* a, uint64_t b);
+
+void lexint_or(lexint_t* dst, lexint_t* a, lexint_t* b);
+
+void lexint_or64(lexint_t* dst, lexint_t* a, uint64_t b);
+
+void lexint_xor(lexint_t* dst, lexint_t* a, lexint_t* b);
+
+void lexint_xor64(lexint_t* dst, lexint_t* a, uint64_t b);
+
+void lexint_not(lexint_t* dst, lexint_t* src);
+
 PONY_EXTERN_C_END
 
 #endif

@@ -1,5 +1,5 @@
 #include "evaluate.h"
-#include "method_table.h"
+#include "builtin/method_table.h"
 #include "../ast/lexer.h"
 #include "../type/assemble.h"
 #include "ponyassert.h"
@@ -31,6 +31,9 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* expression,
   ast_t* evaluated_receiver;
   if(!evaluate(opt, receiver, &evaluated_receiver))
     return false;
+
+  // TODO: here we should lookup the definition of the method and see if it is
+  // a compile intrinsic
 
   // First lookup to see if we have a special method to evaluate the expression
   ast_t* type = ast_type(evaluated_receiver);
@@ -102,6 +105,10 @@ static bool evaluate(pass_opt_t* opt, ast_t* expression, ast_t** result)
     case TK_FLOAT:
     case TK_ERROR:
     case TK_STRING:
+      *result = expression;
+      return true;
+
+    case TK_TYPEREF:
       *result = expression;
       return true;
 

@@ -16,10 +16,10 @@ actor Main is TestList
     test(_TestChainedArithmetic)
     test(_TestCompileTimeAssignment)
     test(_TestCompileTimeVariable)
-    /*
-    test(_TestBitwise)
     test(_TestIntegerEquivalence)
+    /*
     test(_TestIntegerToIntegerTypeCast)
+    test(_TestBitwise)
     test(_TestBoolLogicalOperations)
     test(_TestFunctionCall)
     test(_TestFunctionCallNamedArgs)
@@ -105,15 +105,6 @@ class iso _TestCompileTimeVariable is UnitTest
     let y: U32 = # (x * 2)
     h.assert_eq[U32]((1+2)*2, # y)
 
-/*
-class iso _TestBitwise is UnitTest
-
-  fun name(): String => "CompileTimeExpression/U64Bitwise"
-
-  fun apply(h: TestHelper) =>
-    h.assert_eq[U32](#(3823890482 and 123931), 3823890482 and 123931)
-    h.assert_eq[U32](#(3823890482 or 123931), 3823890482 or 123931)
-
 class iso _TestIntegerEquivalence is UnitTest
 
   fun name(): String => "CompileTimeExpression/IntegerEquivalence"
@@ -125,6 +116,45 @@ class iso _TestIntegerEquivalence is UnitTest
     h.assert_false(#(I32(-1) == I32(-7)))
     h.assert_true(#(I32(1) == -I32(-1)))
 
+    h.assert_false(#(U32(1) != U32(1)))
+    h.assert_true(#(U32(1) != U32(7)))
+    h.assert_false(#(I32(-1) != I32(-1)))
+    h.assert_true(#(I32(-1) != I32(-7)))
+    h.assert_false(#(I32(1) != -I32(-1)))
+
+    h.assert_false(#(U32(1) > U32(1)))
+    h.assert_false(#(U32(1) > U32(7)))
+    h.assert_true(#(U32(7) > U32(1)))
+    h.assert_false(#(I32(-1) > I32(-1)))
+    h.assert_true(#(I32(-1) > I32(-7)))
+    h.assert_false(#(I32(-7) > I32(-1)))
+    h.assert_false(#(I32(1) > -I32(-1)))
+
+    h.assert_true(#(U32(1) >= U32(1)))
+    h.assert_false(#(U32(1) >= U32(7)))
+    h.assert_true(#(U32(7) >= U32(1)))
+    h.assert_true(#(I32(-1) >= I32(-1)))
+    h.assert_true(#(I32(-1) >= I32(-7)))
+    h.assert_false(#(I32(-7) >= I32(-1)))
+    h.assert_true(#(I32(1) >= -I32(-1)))
+
+    h.assert_false(#(U32(1) < U32(1)))
+    h.assert_true(#(U32(1) < U32(7)))
+    h.assert_false(#(U32(7) < U32(1)))
+    h.assert_false(#(I32(-1) < I32(-1)))
+    h.assert_false(#(I32(-1) < I32(-7)))
+    h.assert_true(#(I32(-7) < I32(-1)))
+    h.assert_false(#(I32(1) < -I32(-1)))
+
+    h.assert_true(#(U32(1) <= U32(1)))
+    h.assert_true(#(U32(1) <= U32(7)))
+    h.assert_false(#(U32(7) <= U32(1)))
+    h.assert_true(#(I32(-1) <= I32(-1)))
+    h.assert_false(#(I32(-1) <= I32(-7)))
+    h.assert_true(#(I32(-7) <= I32(-1)))
+    h.assert_true(#(I32(1) <= -I32(-1)))
+
+/*
 class iso _TestIntegerToIntegerTypeCast is UnitTest
   """
   Test casting one integer type to another as
@@ -164,6 +194,14 @@ class iso _TestIntegerToIntegerTypeCast is UnitTest
     h.assert_eq[ULong](#(I128(73).ulong()), 73)
     h.assert_eq[USize](#(I128(73).usize()), 73)
 
+
+class iso _TestBitwise is UnitTest
+
+  fun name(): String => "CompileTimeExpression/U64Bitwise"
+
+  fun apply(h: TestHelper) =>
+    h.assert_eq[U32](#(3823890482 and 123931), 3823890482 and 123931)
+    h.assert_eq[U32](#(3823890482 or 123931), 3823890482 or 123931)
 class iso _TestBoolLogicalOperations is UnitTest
 
   fun name(): String => "CompileTimeExpression/Bool"

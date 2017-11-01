@@ -1,8 +1,8 @@
 #include "method_table.h"
-#include "builtin/builtin.h"
-#include "../type/subtype.h"
-#include "../../libponyrt/mem/pool.h"
-#include "../../libponyrt/ds/hash.h"
+#include "builtin.h"
+#include "../../type/subtype.h"
+#include "../../../libponyrt/mem/pool.h"
+#include "../../../libponyrt/ds/hash.h"
 
 #include <string.h>
 
@@ -44,10 +44,8 @@ void methodtab_init()
 {
   method_table_init(&method_table, 20);
   methodtab_add(stringtab("integer"), stringtab("create"), &int_create);
-  /*
   methodtab_add(stringtab("integer"), stringtab("min_value"), &int_min_value);
   methodtab_add(stringtab("integer"), stringtab("max_value"), &int_max_value);
-  */
 
   methodtab_add(stringtab("integer"), stringtab("add"), &int_add);
   methodtab_add(stringtab("integer"), stringtab("sub"), &int_sub);
@@ -55,7 +53,6 @@ void methodtab_init()
   methodtab_add(stringtab("integer"), stringtab("div"), &int_div);
 
   methodtab_add(stringtab("integer"), stringtab("neg"), &int_neg);
-  /*
   methodtab_add(stringtab("integer"), stringtab("eq"), &int_eq);
   methodtab_add(stringtab("integer"), stringtab("ne"), &int_ne);
   methodtab_add(stringtab("integer"), stringtab("lt"), &int_lt);
@@ -63,14 +60,15 @@ void methodtab_init()
   methodtab_add(stringtab("integer"), stringtab("gt"), &int_gt);
   methodtab_add(stringtab("integer"), stringtab("ge"), &int_ge);
 
+  /*
   methodtab_add(stringtab("integer"), stringtab("min"), &int_min);
   methodtab_add(stringtab("integer"), stringtab("max"), &int_max);
-
-  methodtab_add(stringtab("integer"), stringtab("hash"), &int_hash);
+  */
 
   methodtab_add(stringtab("integer"), stringtab("op_and"), &int_and);
   methodtab_add(stringtab("integer"), stringtab("op_or"), &int_or);
   methodtab_add(stringtab("integer"), stringtab("op_xor"), &int_xor);
+  /*
   methodtab_add(stringtab("integer"), stringtab("op_not"), &int_not);
   methodtab_add(stringtab("integer"), stringtab("shl"), &int_shl);
   methodtab_add(stringtab("integer"), stringtab("shr"), &int_shr);

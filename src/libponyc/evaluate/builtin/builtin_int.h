@@ -23,8 +23,6 @@ bool int_gt(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result);
 
 bool int_min(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result);
 bool int_max(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result);
-bool int_(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result);
-bool int_hash(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result);
 
 bool int_and(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result);
 bool int_or(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result);
