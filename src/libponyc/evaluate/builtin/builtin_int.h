@@ -5,8 +5,6 @@
 #include "../../pass/pass.h"
 
 bool int_create(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result);
-bool int_min_value(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result);
-bool int_max_value(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result);
 
 bool int_add(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result);
 bool int_sub(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result);
@@ -20,9 +18,6 @@ bool int_lt(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result);
 bool int_le(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result);
 bool int_ge(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result);
 bool int_gt(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result);
-
-bool int_min(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result);
-bool int_max(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result);
 
 bool int_and(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result);
 bool int_or(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result);
