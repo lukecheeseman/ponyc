@@ -2,6 +2,7 @@
 #include "builtin/method_table.h"
 #include "../ast/lexer.h"
 #include "../type/assemble.h"
+#include "../type/lookup.h"
 #include "ponyassert.h"
 
 void evaluate_init(pass_opt_t* opt)
@@ -31,14 +32,11 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* expression,
   ast_t* evaluated_receiver;
   if(!evaluate(opt, receiver, &evaluated_receiver))
     return false;
+  ast_t* receiver_type = ast_type(evaluated_receiver);
 
-  // TODO: here we should lookup the definition of the method and see if it is
-  // a compile intrinsic
-
-  // First lookup to see if we have a special method to evaluate the expression
-  ast_t* type = ast_type(evaluated_receiver);
+  // First lookup to see if we have a builtin method to evaluate the expression
   method_ptr_t builtin_method
-    = methodtab_lookup(evaluated_receiver, type, ast_name(method_id));
+    = methodtab_lookup(evaluated_receiver, receiver_type, ast_name(method_id));
   if(builtin_method != NULL)
     return builtin_method(opt, evaluated_receiver, arguments, result);
 
@@ -47,9 +45,10 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* expression,
   return false;
 }
 
-/* Construct a mapping from the given lhs identifier to the rhs value. This
+/*
+ * Construct a mapping from the given lhs identifier to the rhs value. This
  * method assumes that all mappings are valid, the method is provided as a
- * convenience to extract the identifier name
+ * convenience to extract the identifier name.
  */
 static bool assign_value(pass_opt_t* opt, ast_t* left, ast_t* right,
   ast_t** result)

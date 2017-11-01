@@ -17,9 +17,9 @@ actor Main is TestList
     test(_TestCompileTimeAssignment)
     test(_TestCompileTimeVariable)
     test(_TestIntegerEquivalence)
-    /*
+    test(_TestIntegerBitwise)
     test(_TestIntegerToIntegerTypeCast)
-    test(_TestBitwise)
+    /*
     test(_TestBoolLogicalOperations)
     test(_TestFunctionCall)
     test(_TestFunctionCallNamedArgs)
@@ -42,7 +42,6 @@ class iso _TestLiterals is UnitTest
     h.assert_eq[I64](# 42, 42)
     h.assert_eq[Bool](# true, true)
     h.assert_eq[Bool](# false, false)
-
 
 class iso _TestSeq is UnitTest
 
@@ -154,7 +153,52 @@ class iso _TestIntegerEquivalence is UnitTest
     h.assert_true(#(I32(-7) <= I32(-1)))
     h.assert_true(#(I32(1) <= -I32(-1)))
 
-/*
+class iso _TestIntegerBitwise is UnitTest
+
+  fun name(): String => "CompileTimeExpression/IntegerBitwise"
+
+  fun apply(h: TestHelper) =>
+    h.assert_eq[U32](#(3823890482 and 123931), 3823890482 and 123931)
+    h.assert_eq[U32](#(3823890482 or 123931), 3823890482 or 123931)
+    h.assert_eq[U32](#(3823890482 xor 123931), 3823890482 xor 123931)
+    h.assert_eq[U32](#(not 3823890482), not 3823890482)
+
+    h.assert_eq[I32](#(42 and 27), 42 and 27)
+    h.assert_eq[I32](#(-42 and 27), -42 and 27)
+    h.assert_eq[I32](#(42 and -27), 42 and -27)
+    h.assert_eq[I32](#(-42 and -27), -42 and -27)
+
+    h.assert_eq[I32](#(42 or 27), 42 or 27)
+    h.assert_eq[I32](#(-42 or 27), -42 or 27)
+    h.assert_eq[I32](#(42 or -27), 42 or -27)
+    h.assert_eq[I32](#(-42 or -27), -42 or -27)
+
+    h.assert_eq[I32](#(42 xor 27), 42 xor 27)
+    h.assert_eq[I32](#(-42 xor 27), -42 xor 27)
+    h.assert_eq[I32](#(42 xor -27), 42 xor -27)
+    h.assert_eq[I32](#(-42 xor -27), -42 xor -27)
+
+    h.assert_eq[I32](#(not 42), not 42)
+    h.assert_eq[I32](#(not -42), not -42)
+
+    h.assert_eq[U32](#(10 << 23), 10 << 23)
+    h.assert_eq[U32](#(23 << 10), 23 << 10)
+
+    h.assert_eq[U32](#(10 >> 23), 10 >> 23)
+    h.assert_eq[U32](#(23 >> 10), 23 >> 10)
+
+    h.assert_eq[I32](#(10 << 23), 10 << 23)
+    h.assert_eq[I32](#(-10 << 23), -10 << 23)
+
+    h.assert_eq[I32](#(23 << 10), 23 << 10)
+    h.assert_eq[I32](#(-23 << 10), -23 << 10)
+
+    h.assert_eq[I32](#(10 >> 23), 10 >> 23)
+    h.assert_eq[I32](#(-10 >> 23), -10 >> 23)
+
+    h.assert_eq[I32](#(23 >> 10), 23 >> 10)
+    h.assert_eq[I32](#(-23 >> 10), -23 >> 10)
+
 class iso _TestIntegerToIntegerTypeCast is UnitTest
   """
   Test casting one integer type to another as
@@ -194,14 +238,7 @@ class iso _TestIntegerToIntegerTypeCast is UnitTest
     h.assert_eq[ULong](#(I128(73).ulong()), 73)
     h.assert_eq[USize](#(I128(73).usize()), 73)
 
-
-class iso _TestBitwise is UnitTest
-
-  fun name(): String => "CompileTimeExpression/U64Bitwise"
-
-  fun apply(h: TestHelper) =>
-    h.assert_eq[U32](#(3823890482 and 123931), 3823890482 and 123931)
-    h.assert_eq[U32](#(3823890482 or 123931), 3823890482 or 123931)
+/*
 class iso _TestBoolLogicalOperations is UnitTest
 
   fun name(): String => "CompileTimeExpression/Bool"
