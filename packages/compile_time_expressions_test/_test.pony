@@ -19,6 +19,7 @@ actor Main is TestList
     test(_TestIntegerEquivalence)
     test(_TestIntegerBitwise)
     test(_TestIntegerToIntegerTypeCast)
+    test(_TestBoolLogicalOperations)
     /*
     test(_TestBoolLogicalOperations)
     test(_TestFunctionCall)
@@ -238,7 +239,6 @@ class iso _TestIntegerToIntegerTypeCast is UnitTest
     h.assert_eq[ULong](#(I128(73).ulong()), 73)
     h.assert_eq[USize](#(I128(73).usize()), 73)
 
-/*
 class iso _TestBoolLogicalOperations is UnitTest
 
   fun name(): String => "CompileTimeExpression/Bool"
@@ -275,6 +275,7 @@ class iso _TestBoolLogicalOperations is UnitTest
     h.assert_true((# (true != false)))
     h.assert_false((# (true != true)))
 
+/*
 class iso _TestFunctionCall is UnitTest
 
   fun name(): String => "CompileTimeExpression/fib"

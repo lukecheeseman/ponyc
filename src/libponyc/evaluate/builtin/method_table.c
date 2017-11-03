@@ -1,5 +1,6 @@
 #include "method_table.h"
-#include "builtin.h"
+#include "builtin_int.h"
+#include "builtin_bool.h"
 #include "../../type/subtype.h"
 #include "../../../libponyrt/mem/pool.h"
 #include "../../../libponyrt/ds/hash.h"
@@ -42,6 +43,8 @@ static void methodtab_add(const char* name, const char* type, method_ptr_t metho
 // Builds the method lookup table for the supported builting operations
 void methodtab_init()
 {
+  // TODO: rename to real?
+  // integer operations
   method_table_init(&method_table, 20);
   methodtab_add(stringtab("integer"), stringtab("create"), &int_create);
 
@@ -85,6 +88,15 @@ void methodtab_init()
   methodtab_add(stringtab("integer"), stringtab("f32"), &int_f32);
   methodtab_add(stringtab("integer"), stringtab("f64"), &int_f64);
   */
+
+  //TODO: make the type names consistent in case
+  // boolean operations
+  methodtab_add(stringtab("Bool"), stringtab("eq"), &bool_eq);
+  methodtab_add(stringtab("Bool"), stringtab("ne"), &bool_ne);
+  methodtab_add(stringtab("Bool"), stringtab("op_and"), &bool_and);
+  methodtab_add(stringtab("Bool"), stringtab("op_or"), &bool_or);
+  methodtab_add(stringtab("Bool"), stringtab("op_xor"), &bool_xor);
+  methodtab_add(stringtab("Bool"), stringtab("op_not"), &bool_not);
 }
 
 method_ptr_t methodtab_lookup(ast_t* receiver, ast_t* type,
