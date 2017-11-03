@@ -138,10 +138,8 @@ static bool int_inequality(pass_opt_t* opt,
   lexint_t* lhs = ast_int(lhs_arg);
   lexint_t* rhs = ast_int(rhs_arg);
 
-  BUILD(compare, lhs_arg, NODE(test(lhs, rhs) ? TK_TRUE : TK_FALSE));
-  ast_settype(compare, type_builtin(opt, ast_type(lhs_arg), "Bool"));
-
-  *result = compare; 
+  BUILD_NO_DECL(*result, lhs_arg, NODE(test(lhs, rhs) ? TK_TRUE : TK_FALSE));
+  ast_settype(*result, type_builtin(opt, ast_type(lhs_arg), "Bool"));
   return true;
 }
 

@@ -19,8 +19,8 @@ actor Main is TestList
     test(_TestIntegerEquivalence)
     test(_TestIntegerBitwise)
     test(_TestIntegerToIntegerTypeCast)
-    /*
     test(_TestBoolLogicalOperations)
+    /*
     test(_TestFunctionCall)
     test(_TestFunctionCallNamedArgs)
     test(_TestCompileTimeObjectField)
@@ -238,22 +238,43 @@ class iso _TestIntegerToIntegerTypeCast is UnitTest
     h.assert_eq[ULong](#(I128(73).ulong()), 73)
     h.assert_eq[USize](#(I128(73).usize()), 73)
 
-/*
 class iso _TestBoolLogicalOperations is UnitTest
 
   fun name(): String => "CompileTimeExpression/Bool"
 
   fun apply(h: TestHelper) =>
-    h.assert_false((# false or false))
-    h.assert_true((# false or true))
-    h.assert_true((# true or false))
-    h.assert_true((# true or true))
+    h.assert_false((# false))
+    h.assert_true((# true))
 
-    h.assert_false((# false and false))
-    h.assert_false((# false and true))
-    h.assert_false((# true and false))
-    h.assert_true((# true and true))
+    h.assert_true((# (not false)))
+    h.assert_false((# (not true)))
 
+    h.assert_false((# (false or false)))
+    h.assert_true((# (false or true)))
+    h.assert_true((# (true or false)))
+    h.assert_true((# (true or true)))
+
+    h.assert_false((# (false and false)))
+    h.assert_false((# (false and true)))
+    h.assert_false((# (true and false)))
+    h.assert_true((# (true and true)))
+
+    h.assert_false((# (false xor false)))
+    h.assert_true((# (false xor true)))
+    h.assert_true((# (true xor false)))
+    h.assert_false((# (true xor true)))
+
+    h.assert_true((# (false == false)))
+    h.assert_false((# (false == true)))
+    h.assert_false((# (true == false)))
+    h.assert_true((# (true == true)))
+
+    h.assert_false((# (false != false)))
+    h.assert_true((# (false != true)))
+    h.assert_true((# (true != false)))
+    h.assert_false((# (true != true)))
+
+/*
 class iso _TestFunctionCall is UnitTest
 
   fun name(): String => "CompileTimeExpression/fib"
