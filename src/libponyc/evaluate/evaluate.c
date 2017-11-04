@@ -21,30 +21,6 @@ bool expr_constant(pass_opt_t* opt, ast_t* ast)
   return true;
 }
 
-static bool evaluate(pass_opt_t* opt, ast_t* expression, ast_t** result);
-
-static bool evaluate_method(pass_opt_t* opt, ast_t* expression,
-  ast_t* arguments, ast_t** result)
-{
-  pony_assert(expression != NULL);
-  AST_GET_CHILDREN(expression, receiver, method_id);
-
-  ast_t* evaluated_receiver;
-  if(!evaluate(opt, receiver, &evaluated_receiver))
-    return false;
-  ast_t* receiver_type = ast_type(evaluated_receiver);
-
-  // First lookup to see if we have a builtin method to evaluate the expression
-  method_ptr_t builtin_method
-    = methodtab_lookup(evaluated_receiver, receiver_type, ast_name(method_id));
-  if(builtin_method != NULL)
-    return builtin_method(opt, evaluated_receiver, arguments, result);
-
-  ast_error(opt->check.errors, expression,
-    "unable to evaluate compile-time expression");
-  return false;
-}
-
 /*
  * Construct a mapping from the given lhs identifier to the rhs value. This
  * method assumes that all mappings are valid, the method is provided as a
@@ -62,14 +38,13 @@ static bool assign_value(pass_opt_t* opt, ast_t* left, ast_t* right,
     case TK_VAR:
     case TK_VARREF:
     case TK_LET:
+    case TK_PARAM:
       pony_assert(ast_setvalue(left, ast_name(ast_child(left)), right, result));
       return true;
 
     default:
-      pony_assert(0);
+      return false;
   }
-
-  return false;
 }
 
 // Bind a value so that it can be used in later compile-time expressions
@@ -85,6 +60,71 @@ static bool bind_value(pass_opt_t* opt, ast_t* left, ast_t* right,
     return false;
 
   return assign_value(opt, left, right, result);
+}
+
+
+static bool evaluate(pass_opt_t* opt, ast_t* expression, ast_t** result);
+
+static bool evaluate_method(pass_opt_t* opt, ast_t* expression,
+  ast_t* arguments, ast_t** result)
+{
+  pony_assert(expression != NULL);
+  AST_GET_CHILDREN(expression, receiver, method_id);
+
+  ast_t* evaluated_receiver;
+  if(!evaluate(opt, receiver, &evaluated_receiver))
+    return false;
+
+  ast_t* receiver_type = ast_type(evaluated_receiver);
+  // Look throw the this type arrow
+  if((ast_id(receiver_type) == TK_ARROW) &&
+    (ast_id(ast_child(receiver_type)) == TK_THISTYPE))
+    receiver_type = ast_childidx(receiver_type, 1);
+
+  // First lookup to see if we have a builtin method to evaluate the expression
+  method_ptr_t builtin_method
+    = methodtab_lookup(evaluated_receiver, receiver_type, ast_name(method_id));
+  if(builtin_method != NULL)
+    return builtin_method(opt, evaluated_receiver, arguments, result);
+
+  // TODO: Need to handle parametric functions at some point (and objects for that matter)
+  // We cannot evaluate compile-time behaviours, we shouldn't get here as we
+  // cannot construct compile-time actors.
+  if(ast_id(expression) == TK_BEREF)
+  {
+    ast_error(opt->check.errors, expression,
+              "cannot evaluate compile-time behaviours");
+    return false;
+  }
+
+  // If there was no built-in then lookup the rdefintion of the function:
+  // we push the package from where the function came from so that the lookup
+  // proceeds as if we were in the correct package as we may, through private
+  // methods within public methods, require access to private memebers.
+  ast_t* def
+    = ast_get(expression, ast_name(ast_childidx(receiver_type, 1)), NULL);
+  frame_push(&opt->check, ast_nearest(def, TK_PACKAGE));
+  ast_t* method = lookup(opt, def, receiver_type, ast_name(method_id));
+  pony_assert(method != NULL);
+  frame_pop(&opt->check);
+
+  ast_t* parameters = ast_childidx(method, 3);
+
+  ast_t* parameter = ast_child(parameters);
+  ast_t* argument = ast_child(arguments);
+  while(argument != NULL)
+  {
+    assign_value(opt, parameter, argument, NULL);
+    argument = ast_sibling(argument);
+    parameter = ast_sibling(parameter);
+  }
+
+  // Evaluate the body
+  ast_t* method_body = ast_childidx(method, 6);
+  if(!evaluate(opt, method_body, result))
+    return false;
+
+  return true;
 }
 
 static bool evaluate(pass_opt_t* opt, ast_t* expression, ast_t** result)
@@ -222,6 +262,21 @@ static bool evaluate(pass_opt_t* opt, ast_t* expression, ast_t** result)
         pony_assert(ast_id(evaluated_condition) == TK_TRUE ||
                     ast_id(evaluated_condition) == TK_FALSE);
       }
+
+      return true;
+    }
+
+    case TK_TRY:
+    {
+      // Evaluate the try expression but this may result in a TK_ERROR result,
+      // so test if this is the case after evaluation, if so evaluate the else
+      // branch
+      AST_GET_CHILDREN(expression, try_body, else_body);
+      if(!evaluate(opt, try_body, result))
+        return false;
+
+      if(ast_id(*result) == TK_ERROR)
+        return evaluate(opt, else_body, result);
 
       return true;
     }

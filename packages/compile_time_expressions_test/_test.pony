@@ -22,13 +22,15 @@ actor Main is TestList
     test(_TestBoolLogicalOperations)
     test(_TestConditional)
     test(_TestWhileLoop)
+    test(_TestScoping)
+    test(_TestTry)
+    test(_TestFunctionCall)
     /*
     test(_TestFunctionCall)
     test(_TestFunctionCallNamedArgs)
     test(_TestCompileTimeObjectField)
     test(_TestCompileTimeObjectMethod)
     test(_TestCompileTimeObjectEmbeddedField)
-    test(_TestCompileTimeScoping)
     test(_TestCompileTimeTuples)
     */
 
@@ -346,6 +348,42 @@ class iso _TestWhileLoop is UnitTest
     test_while(h)
     test_else(h)
 
+
+class iso _TestScoping is UnitTest
+
+  fun name(): String => "CompileTimeExpression/Scoping"
+
+  fun apply(h: TestHelper) =>
+    var x = #(
+      var z: U32 = 4
+      if true then z = 5 end
+      z)
+    var y = (
+      var z: U32 = 4
+      if true then z = 5 end
+      z)
+    h.assert_eq[U32](x, y)
+    h.assert_eq[U32](x, 5)
+
+class iso _TestTry is UnitTest
+
+  fun name(): String => "CompileTimeExpression/Try"
+
+  fun apply(h: TestHelper) =>
+    h.assert_eq[U32](#(try if true then 2 else error end else 3 end),
+                      (try if true then 2 else error end else 3 end))
+    h.assert_eq[U32](#(try if false then 2 else error end else 3 end),
+                      (try if false then 2 else error end else 3 end))
+
+class iso _TestFunctionCall is UnitTest
+
+  fun name(): String => "CompileTimeExpression/FunctionCall"
+
+  fun foo(): U32 => 16
+
+  fun apply(h: TestHelper) =>
+    h.assert_eq[U32](# (foo()), foo())
+
 /*
 class iso _TestFunctionCall is UnitTest
 
@@ -363,7 +401,6 @@ class iso _TestFunctionCall is UnitTest
    fun apply(h: TestHelper) =>
       h.assert_eq[U32](#fib(1), fib(1))
       h.assert_eq[U32](#fib(8), fib(8))
-      h.assert_eq[U32](#fib(20), fib(20))
 
 class iso _TestFunctionCallNamedArgs is UnitTest
 
@@ -428,21 +465,6 @@ class iso _TestCompileTimeObjectEmbeddedField is UnitTest
     let static_f = #(ClassWithEmbeddedField(2123).ef.f)
     let dynamic_f = ClassWithEmbeddedField(2123).ef.f
     h.assert_eq[U32](static_f, dynamic_f)
-
-class iso _TestCompileTimeScoping is UnitTest
-
-  fun name(): String => "CompileTimeExpression/CompileTimeScoping"
-
-  fun apply(h: TestHelper) =>
-    let x = #(
-      var z: U32 = 4
-      if true then z = 5 end
-      z)
-    let y = (
-      var z: U32 = 4
-      if true then z = 5 end
-      z)
-    h.assert_eq[U32](x, y)
 
 class iso _TestCompileTimeTuples is UnitTest
 
