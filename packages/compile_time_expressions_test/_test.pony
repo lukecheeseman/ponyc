@@ -20,8 +20,8 @@ actor Main is TestList
     test(_TestIntegerBitwise)
     test(_TestIntegerToIntegerTypeCast)
     test(_TestBoolLogicalOperations)
+    test(_TestConditional)
     /*
-    test(_TestBoolLogicalOperations)
     test(_TestFunctionCall)
     test(_TestFunctionCallNamedArgs)
     test(_TestCompileTimeObjectField)
@@ -241,7 +241,7 @@ class iso _TestIntegerToIntegerTypeCast is UnitTest
 
 class iso _TestBoolLogicalOperations is UnitTest
 
-  fun name(): String => "CompileTimeExpression/Bool"
+  fun name(): String => "CompileTimeExpression/BoolLogicalOperations"
 
   fun apply(h: TestHelper) =>
     h.assert_false((# false))
@@ -275,10 +275,35 @@ class iso _TestBoolLogicalOperations is UnitTest
     h.assert_true((# (true != false)))
     h.assert_false((# (true != true)))
 
+class iso _TestConditional is UnitTest
+
+  fun name(): String => "CompileTimeExpression/Conditional"
+
+   fun apply(h: TestHelper) =>
+      h.assert_eq[U32](#(if true then 2 else 5 end),
+                        (if true then 2 else 5 end))
+      h.assert_eq[U32](#(if false then 2 else 5 end),
+                        (if false then 2 else 5 end))
+
+      let cond_true: Bool = # true
+      h.assert_eq[U32](#(if cond_true then 2 else 5 end),
+                        (if cond_true then 2 else 5 end))
+      let cond_false: Bool = # false
+      h.assert_eq[U32](#(if cond_false then 2 else 5 end),
+                        (if cond_false then 2 else 5 end))
+
+      h.assert_eq[U32](#(if true then 2 elseif true then 5 else 62 end),
+                        (if true then 2 elseif true then 5 else 62 end))
+      h.assert_eq[U32](#(if true then 2 elseif false then 5 else 62 end),
+                        (if true then 2 elseif false then 5 else 62 end))
+      h.assert_eq[U32](#(if false then 2 elseif true then 5 else 62 end),
+                        (if false then 2 elseif true then 5 else 62 end))
+      h.assert_eq[U32](#(if false then 2 elseif false then 5 else 62 end),
+                        (if false then 2 elseif false then 5 else 62 end))
 /*
 class iso _TestFunctionCall is UnitTest
 
-  fun name(): String => "CompileTimeExpression/fib"
+  fun name(): String => "CompileTimeExpression/FunctionCall"
 
   fun fib(n: U32): U32 =>
     if n == 0 then

@@ -179,6 +179,17 @@ static bool evaluate(pass_opt_t* opt, ast_t* expression, ast_t** result)
       *result = expression;
       return true;
 
+    case TK_IF:
+    case TK_ELSEIF:
+    {
+      AST_GET_CHILDREN(expression, condition, then_branch, else_branch);
+      ast_t* evaluated_condition;
+      return evaluate(opt, condition, &evaluated_condition) &&
+            (ast_id(evaluated_condition) == TK_TRUE ?
+            evaluate(opt, then_branch, result):
+            evaluate(opt, else_branch, result));
+    }
+
     default:
       ast_error(opt->check.errors, expression,
         "expression was not a compile-time expression");
