@@ -101,11 +101,14 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* expression,
   // we push the package from where the function came from so that the lookup
   // proceeds as if we were in the correct package as we may, through private
   // methods within public methods, require access to private memebers.
-  ast_t* def
-    = ast_get(expression, ast_name(ast_childidx(receiver_type, 1)), NULL);
+  ast_t* def = ast_get(expression, ast_name(ast_childidx(receiver_type, 1)), NULL);
   frame_push(&opt->check, ast_nearest(def, TK_PACKAGE));
-  ast_t* method = lookup(opt, def, receiver_type, ast_name(method_id));
+  deferred_reification_t* method_def = lookup(opt, def, receiver_type,
+                                              ast_name(method_id));
+  pony_assert(method_def != NULL);
+  ast_t* method = deferred_reify(method_def, method_def->ast, opt);
   pony_assert(method != NULL);
+  deferred_reify_free(method_def);
   frame_pop(&opt->check);
 
   ast_t* parameters = ast_childidx(method, 3);

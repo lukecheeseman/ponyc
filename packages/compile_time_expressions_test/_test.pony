@@ -25,9 +25,10 @@ actor Main is TestList
     test(_TestScoping)
     test(_TestTry)
     test(_TestFunctionCall)
+    test(_TestFunctionCallWithArgs)
+    test(_TestFunctionCallWithNamedArgs)
+    test(_TestRecursiveFunction)
     /*
-    test(_TestFunctionCall)
-    test(_TestFunctionCallNamedArgs)
     test(_TestCompileTimeObjectField)
     test(_TestCompileTimeObjectMethod)
     test(_TestCompileTimeObjectEmbeddedField)
@@ -384,10 +385,19 @@ class iso _TestFunctionCall is UnitTest
   fun apply(h: TestHelper) =>
     h.assert_eq[U32](# (foo()), foo())
 
-/*
-class iso _TestFunctionCall is UnitTest
+class iso _TestFunctionCallWithArgs is UnitTest
 
-  fun name(): String => "CompileTimeExpression/FunctionCall"
+  fun name(): String => "CompileTimeExpression/FunctionCallWithArgs"
+
+  fun foo(b: Bool, n: U32): U32 => if b then n else 2 end
+
+  fun apply(h: TestHelper) =>
+    h.assert_eq[U32](# (foo(true, 64)), foo(true, 64))
+    h.assert_eq[U32](# (foo(false, 64)), foo(false, 64))
+
+class iso _TestRecursiveFunction is UnitTest
+
+  fun name(): String => "CompileTimeExpression/RecursiveFunction"
 
   fun fib(n: U32): U32 =>
     if n == 0 then
@@ -402,9 +412,9 @@ class iso _TestFunctionCall is UnitTest
       h.assert_eq[U32](#fib(1), fib(1))
       h.assert_eq[U32](#fib(8), fib(8))
 
-class iso _TestFunctionCallNamedArgs is UnitTest
+class iso _TestFunctionCallWithNamedArgs is UnitTest
 
-  fun name(): String => "CompileTimeExpression/named"
+  fun name(): String => "CompileTimeExpression/FunctionCallWithNamedArgs"
 
   fun foo(x: U32, y: U32, z:U32 = 4): U32 => (x * y) + z
 
@@ -414,6 +424,7 @@ class iso _TestFunctionCallNamedArgs is UnitTest
     h.assert_eq[U32](#foo(1 where z=2, y=3), foo(1 where z=2, y=3))
     h.assert_eq[U32](#foo(1 where y=3), foo(1 where y=3))
 
+/*
 class ClassWithField
   let f: U32
 
