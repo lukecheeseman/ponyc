@@ -308,6 +308,15 @@ ast_result_t pass_evaluate(ast_t** astp, pass_opt_t* options)
       return AST_ERROR;
     }
 
+    if(ast_id(result) == TK_ERROR)
+    {
+      ast_error(options->check.errors, ast,
+                "unresolved error occurred during evaluation");
+      ast_error_continue(options->check.errors, result,
+                         "error originated here");
+      return AST_ERROR;
+    }
+
     pony_assert(result != NULL);
     ast_replace(astp, result);
 

@@ -95,3 +95,29 @@ TEST_F(CompileTimeExpressionTest, CompileTimeExpressionAssignedToVarAndUsed)
 
   TEST_ERROR(src);
 }
+
+TEST_F(CompileTimeExpressionTest, CompileTimeError)
+{
+  const char* src =
+    "actor Main\n"
+    "  fun foo(): U32 ? => if true then error else 32 end\n"
+    "\n"
+    "  new create(env: Env) =>\n"
+    "    let x: U32 = # foo()";
+
+  TEST_ERROR(src);
+}
+
+TEST_F(CompileTimeExpressionTest, CompileTimeErrorNotPartial)
+{
+  // Test that evaluating an expression at compile-time means
+  // we can lose the partialness of a function
+  const char* src =
+    "actor Main\n"
+    "  fun foo(): U32 ? => if false then error else 32 end\n"
+    "\n"
+    "  new create(env: Env) =>\n"
+    "    let x: U32 = # foo()";
+
+  TEST_EVALUATE_COMPILE(src);
+}
