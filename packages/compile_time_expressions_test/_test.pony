@@ -28,6 +28,7 @@ actor Main is TestList
     test(_TestFunctionCallWithArgs)
     test(_TestFunctionCallWithNamedArgs)
     test(_TestRecursiveFunction)
+    test(_TestParametricFunction)
     /*
     test(_TestCompileTimeObjectField)
     test(_TestCompileTimeObjectMethod)
@@ -423,6 +424,17 @@ class iso _TestFunctionCallWithNamedArgs is UnitTest
     h.assert_eq[U32](#foo(1 where y=2, z=3), foo(1 where y=2, z=3))
     h.assert_eq[U32](#foo(1 where z=2, y=3), foo(1 where z=2, y=3))
     h.assert_eq[U32](#foo(1 where y=3), foo(1 where y=3))
+
+class iso _TestParametricFunction is UnitTest
+
+  fun name(): String => "CompileTimeExpression/ParametricFunction"
+
+  fun foo[A](x: A): A => x
+
+  fun apply(h: TestHelper) =>
+    h.assert_eq[U32](#foo[U32](53), foo[U32](53))
+    h.assert_eq[U32](#foo[U32](9), foo[U32](9))
+    h.assert_eq[Bool](#foo[Bool](true), foo[Bool](true))
 
 /*
 class ClassWithField

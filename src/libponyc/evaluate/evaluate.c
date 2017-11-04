@@ -3,6 +3,7 @@
 #include "../ast/lexer.h"
 #include "../type/assemble.h"
 #include "../type/lookup.h"
+#include "../type/reify.h"
 #include "ponyassert.h"
 
 void evaluate_init(pass_opt_t* opt)
@@ -69,6 +70,16 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* expression,
   ast_t* arguments, ast_t** result)
 {
   pony_assert(expression != NULL);
+
+  // Check if this is a parametric function type and if so keep hold
+  // of the typeargs for later.
+  ast_t* typeargs = NULL;
+  if(ast_id(ast_childidx(expression, 1)) == TK_TYPEARGS)
+  {
+    typeargs = ast_childidx(expression, 1);
+    expression = ast_child(expression);
+  }
+
   AST_GET_CHILDREN(expression, receiver, method_id);
 
   ast_t* evaluated_receiver;
@@ -87,7 +98,6 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* expression,
   if(builtin_method != NULL)
     return builtin_method(opt, evaluated_receiver, arguments, result);
 
-  // TODO: Need to handle parametric functions at some point (and objects for that matter)
   // We cannot evaluate compile-time behaviours, we shouldn't get here as we
   // cannot construct compile-time actors.
   if(ast_id(expression) == TK_BEREF)
@@ -111,8 +121,18 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* expression,
   deferred_reify_free(method_def);
   frame_pop(&opt->check);
 
-  ast_t* parameters = ast_childidx(method, 3);
+  if(typeargs != NULL)
+  {
+    ast_t* typeparams = ast_childidx(method, 2);
+    ast_t* r_method = reify(method, typeparams, typeargs, opt, true);
+    ast_free_unattached(method);
+    method = r_method;
+    pony_assert(method != NULL);
+  }
 
+  // Evaluate all the arguments and assign them to the repsecitive paramter
+  // names
+  ast_t* parameters = ast_childidx(method, 3);
   ast_t* parameter = ast_child(parameters);
   ast_t* argument = ast_child(arguments);
   while(argument != NULL)
@@ -122,7 +142,7 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* expression,
     parameter = ast_sibling(parameter);
   }
 
-  // Evaluate the body
+  // Now in a position to evaluate the body
   ast_t* method_body = ast_childidx(method, 6);
   if(!evaluate(opt, method_body, result))
     return false;
