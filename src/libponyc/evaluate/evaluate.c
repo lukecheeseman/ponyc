@@ -62,7 +62,8 @@ static bool assign_value(pass_opt_t* opt, ast_t* left, ast_t* right,
     case TK_VAR:
     case TK_VARREF:
     case TK_LET:
-      return ast_setvalue(left, ast_name(ast_child(left)), right, result);
+      pony_assert(ast_setvalue(left, ast_name(ast_child(left)), right, result));
+      return true;
 
     default:
       pony_assert(0);
@@ -184,10 +185,45 @@ static bool evaluate(pass_opt_t* opt, ast_t* expression, ast_t** result)
     {
       AST_GET_CHILDREN(expression, condition, then_branch, else_branch);
       ast_t* evaluated_condition;
-      return evaluate(opt, condition, &evaluated_condition) &&
-            (ast_id(evaluated_condition) == TK_TRUE ?
+      if(!evaluate(opt, condition, &evaluated_condition))
+        return false;
+
+      pony_assert(ast_id(evaluated_condition) == TK_TRUE ||
+                  ast_id(evaluated_condition) == TK_FALSE);
+
+      return ast_id(evaluated_condition) == TK_TRUE ?
             evaluate(opt, then_branch, result):
-            evaluate(opt, else_branch, result));
+            evaluate(opt, else_branch, result);
+    }
+
+    case TK_WHILE:
+    {
+      AST_GET_CHILDREN(expression, condition, then_body, else_body);
+      ast_t* evaluated_condition;
+      if(!evaluate(opt, condition, &evaluated_condition))
+        return false;
+
+      pony_assert(ast_id(evaluated_condition) == TK_TRUE ||
+                  ast_id(evaluated_condition) == TK_FALSE);
+
+      // The condition didn't hold on the first iteration so we evaluate the
+      // else
+      if(ast_id(evaluated_condition) == TK_FALSE)
+        return evaluate(opt, else_body, result);
+
+      // The condition held so evaluate the while returning the iteration
+      // result as the evaluated result
+      while(ast_id(evaluated_condition) == TK_TRUE)
+      {
+        if(!evaluate(opt, then_body, result) ||
+           !evaluate(opt, condition, &evaluated_condition))
+          return false;
+
+        pony_assert(ast_id(evaluated_condition) == TK_TRUE ||
+                    ast_id(evaluated_condition) == TK_FALSE);
+      }
+
+      return true;
     }
 
     default:
@@ -216,15 +252,13 @@ ast_result_t pass_evaluate(ast_t** astp, pass_opt_t* options)
       pony_assert(errors_get_count(options->check.errors) > 0);
       return AST_ERROR;
     }
+
+    pony_assert(result != NULL);
     ast_replace(astp, result);
 
     ast = *astp;
     if(ast_id(ast_parent(ast)) == TK_ASSIGN)
-    {
-      ast_t* left = ast_previous(ast);
-      if(!bind_value(options, left, ast, NULL))
-        return AST_ERROR;
-    }
+      bind_value(options, ast_previous(ast), ast, NULL);
   }
 
   return AST_OK;

@@ -21,13 +21,13 @@ actor Main is TestList
     test(_TestIntegerToIntegerTypeCast)
     test(_TestBoolLogicalOperations)
     test(_TestConditional)
+    test(_TestWhileLoop)
     /*
     test(_TestFunctionCall)
     test(_TestFunctionCallNamedArgs)
     test(_TestCompileTimeObjectField)
     test(_TestCompileTimeObjectMethod)
     test(_TestCompileTimeObjectEmbeddedField)
-    test(_TestCompileTimeWhileLoop)
     test(_TestCompileTimeScoping)
     test(_TestCompileTimeTuples)
     */
@@ -300,6 +300,52 @@ class iso _TestConditional is UnitTest
                         (if false then 2 elseif true then 5 else 62 end))
       h.assert_eq[U32](#(if false then 2 elseif false then 5 else 62 end),
                         (if false then 2 elseif false then 5 else 62 end))
+
+class iso _TestWhileLoop is UnitTest
+
+  fun name(): String => "CompileTimeExpression/WhileLoop"
+
+  fun test_while(h: TestHelper) =>
+    let x = #(
+      var result: U32 = 1
+      var i: U32 = 1
+      while i < 10 do
+        result = result * (i = i + 1)
+      end
+      result)
+    let y = (
+      var result: U32 = 1
+      var i: U32 = 1
+      while i < 10 do
+        result = result * (i = i + 1)
+      end
+      result)
+    h.assert_eq[U32](x, y)
+
+  fun test_else(h: TestHelper) =>
+    let x = #(
+      var result: U32 = 1
+      while false do
+        result = result * 2
+      else
+        result = 4
+      end
+      result)
+    let y = (
+      var result: U32 = 1
+      while false do
+        result = result * 2
+      else
+        result = 4
+      end
+      result)
+    h.assert_eq[U32](x, y)
+    h.assert_eq[U32](x, 4)
+
+  fun apply(h: TestHelper) =>
+    test_while(h)
+    test_else(h)
+
 /*
 class iso _TestFunctionCall is UnitTest
 
@@ -382,27 +428,6 @@ class iso _TestCompileTimeObjectEmbeddedField is UnitTest
     let static_f = #(ClassWithEmbeddedField(2123).ef.f)
     let dynamic_f = ClassWithEmbeddedField(2123).ef.f
     h.assert_eq[U32](static_f, dynamic_f)
-
-class iso _TestCompileTimeWhileLoop is UnitTest
-
-  fun name(): String => "CompileTimeExpression/CompileTimeWhileLoop"
-
-  fun apply(h: TestHelper) =>
-    let x = #(
-      var result: U32 = 1
-      var i: U32 = 1
-      while i < 10 do
-        result = result * (i = i + 1)
-      end
-      result)
-    let y = (
-      var result: U32 = 1
-      var i: U32 = 1
-      while i < 10 do
-        result = result * (i = i + 1)
-      end
-      result)
-    h.assert_eq[U32](x, y)
 
 class iso _TestCompileTimeScoping is UnitTest
 

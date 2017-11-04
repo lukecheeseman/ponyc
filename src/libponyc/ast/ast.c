@@ -1146,7 +1146,7 @@ bool ast_setvalue(ast_t* ast, const char* name, ast_t* value, ast_t** prev)
   ast_t* symtab_prev;
   do
   {
-    if(ast->symtab != NULL)
+    if(scope->symtab != NULL)
     {
       sym_status_t status2;
       symtab_prev = (ast_t*)symtab_find_value(scope->symtab, name, &status2);

@@ -15,7 +15,7 @@ bool int_create(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result)
 {
   (void) receiver;
   (void) opt;
-  *result = ast_child(args);
+  *result = ast_dup(ast_child(args));
   return int_check_operand(*result);
 }
 
