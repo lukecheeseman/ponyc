@@ -4,9 +4,9 @@
 #include "../../type/assemble.h"
 #include "ponyassert.h"
 
-static bool bool_check_operand(ast_t* arg)
+static bool bool_check_operand(ast_t* ast)
 {
-  bool is_bool = (ast_id(arg) == TK_TRUE) || (ast_id(arg) == TK_FALSE);
+  bool is_bool = (ast_id(ast) == TK_TRUE) || (ast_id(ast) == TK_FALSE);
   pony_assert(is_bool);
   return is_bool;
 }

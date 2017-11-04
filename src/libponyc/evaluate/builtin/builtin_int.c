@@ -4,45 +4,31 @@
 #include "../../type/assemble.h"
 #include "ponyassert.h"
 
+static int int_check_operand(ast_t* ast)
+{
+  int is_int = (ast_id(ast) == TK_INT);
+  pony_assert(is_int);
+  return is_int;
+}
+
 bool int_create(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result)
 {
   (void) receiver;
   (void) opt;
   *result = ast_child(args);
-  return true;
+  return int_check_operand(*result);
 }
 
 typedef void (*binary_int_operation_t)(lexint_t*, lexint_t*, lexint_t*);
 
-static bool int_check_operands(pass_opt_t* opt, ast_t* lhs_arg, ast_t* rhs_arg)
-{
-  if(lhs_arg == NULL || rhs_arg == NULL)
-    return false;
-
-  if(ast_id(lhs_arg) != TK_INT)
-  {
-    ast_error(opt->check.errors, rhs_arg,
-      "%s is not a compile-time integer expression", ast_get_print(lhs_arg));
-    return false;
-  }
-
-  if(ast_id(rhs_arg) != TK_INT)
-  {
-    ast_error(opt->check.errors, rhs_arg,
-      "%s is not a compile-time integer expression", ast_get_print(rhs_arg));
-    return false;
-  }
-
-  return true; 
-}
-
 static bool int_binary_operation(pass_opt_t* opt, ast_t* receiver,
   ast_t* args, ast_t** result, binary_int_operation_t operation)
 {
+  (void)opt;
   pony_assert(ast_id(args) == TK_POSITIONALARGS);
   ast_t* lhs_arg = receiver;
   ast_t* rhs_arg = ast_child(args);
-  if(!int_check_operands(opt, lhs_arg, rhs_arg))
+  if(!int_check_operand(lhs_arg) || !int_check_operand(rhs_arg))
     return false;
 
   *result = ast_dup(lhs_arg);
@@ -71,6 +57,7 @@ bool int_mul(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result)
   {
     // FIXME: can only print 64 bit integers with ast_get_rpint
     // token method for printing should probably be changed then
+    pony_assert(0);
     ast_error(opt->check.errors, rhs_arg,
       "Value %s is too large for multiplication", ast_get_print(rhs_arg));
     return false;
@@ -87,6 +74,7 @@ bool int_div(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result)
   {
     // FIXME: can only print 64 bit integers with ast_get_rpint
     // token method for printing should probably be changed then
+    pony_assert(0);
     ast_error(opt->check.errors, rhs_arg,
       "Value %s is too large for division", ast_get_print(rhs_arg));
     return false;
@@ -99,7 +87,7 @@ bool int_neg(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result)
 {
   pony_assert(ast_id(args) == TK_NONE);
   (void) opt;
-  if(ast_id(receiver) != TK_INT)
+  if(!int_check_operand(receiver))
     return false;
 
   *result = ast_dup(receiver);
@@ -132,7 +120,7 @@ static bool int_inequality(pass_opt_t* opt,
   pony_assert(ast_id(args) == TK_POSITIONALARGS);
   ast_t* lhs_arg = receiver;
   ast_t* rhs_arg = ast_child(args);
-  if(!int_check_operands(opt, lhs_arg, rhs_arg))
+  if(!int_check_operand(lhs_arg) || !int_check_operand(rhs_arg))
     return false;
 
   lexint_t* lhs = ast_int(lhs_arg);
@@ -207,7 +195,7 @@ bool int_not(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result)
 {
   pony_assert(ast_id(args) == TK_NONE);
   (void) opt;
-  if(ast_id(receiver) != TK_INT)
+  if(!int_check_operand(receiver))
     return false;
 
   *result = ast_dup(receiver);
@@ -218,10 +206,11 @@ bool int_not(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result)
 
 bool int_shl(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result)
 {
+  (void)opt;
   pony_assert(ast_id(args) == TK_POSITIONALARGS);
   ast_t* lhs_arg = receiver;
   ast_t* rhs_arg = ast_child(args);
-  if(!int_check_operands(opt, lhs_arg, rhs_arg))
+  if(!int_check_operand(lhs_arg) || !int_check_operand(rhs_arg))
     return false;
 
   *result = ast_dup(lhs_arg);
@@ -234,10 +223,11 @@ bool int_shl(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result)
 
 bool int_shr(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result)
 {
+  (void)opt;
   pony_assert(ast_id(args) == TK_POSITIONALARGS);
   ast_t* lhs_arg = receiver;
   ast_t* rhs_arg = ast_child(args);
-  if(!int_check_operands(opt, lhs_arg, rhs_arg))
+  if(!int_check_operand(lhs_arg) || !int_check_operand(rhs_arg))
     return false;
 
   *result = ast_dup(lhs_arg);
@@ -249,121 +239,99 @@ bool int_shr(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result)
 }
 
 // casting methods
-static void int_cast_to_type(pass_opt_t* opt, ast_t** receiver, const char* type)
+static bool int_cast_to_type(pass_opt_t* opt, ast_t* receiver, ast_t** result,
+  const char* type)
 {
-  ast_t* new_type = type_builtin(opt, ast_type(*receiver), type);
+  if(!int_check_operand(receiver))
+    return false;
+
+  *result = ast_dup(receiver);
+  ast_t* new_type = type_builtin(opt, ast_type(receiver), type);
   pony_assert(new_type != NULL);
-  ast_settype(*receiver, new_type);
+  ast_settype(receiver, new_type);
+  return true;
 }
 
 bool int_i8(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result)
 {
   pony_assert(ast_id(args) == TK_NONE);
-  *result = ast_dup(receiver);
-  int_cast_to_type(opt, result, "I8");
-  return true;
+  return int_cast_to_type(opt, receiver, result, "I8");
 }
 
 bool int_i16(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result)
 {
   pony_assert(ast_id(args) == TK_NONE);
-  *result = ast_dup(receiver);
-  int_cast_to_type(opt, result, "I16");
-  return true;
+  return int_cast_to_type(opt, receiver, result, "I16");
 }
 
 bool int_i32(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result)
 {
   pony_assert(ast_id(args) == TK_NONE);
-  *result = ast_dup(receiver);
-  int_cast_to_type(opt, result, "I32");
-  return true;
+  return int_cast_to_type(opt, receiver, result, "I32");
 }
 
 bool int_i64(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result)
 {
   pony_assert(ast_id(args) == TK_NONE);
-  *result = ast_dup(receiver);
-  int_cast_to_type(opt, result, "I64");
-  return true;
+  return int_cast_to_type(opt, receiver, result, "I64");
 }
 
 bool int_i128(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result)
 {
   pony_assert(ast_id(args) == TK_NONE);
-  *result = ast_dup(receiver);
-  int_cast_to_type(opt, result, "I128");
-  return true;
+  return int_cast_to_type(opt, receiver, result, "I128");
 }
 
 bool int_ilong(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result)
 {
   pony_assert(ast_id(args) == TK_NONE);
-  *result = ast_dup(receiver);
-  int_cast_to_type(opt, result, "ILong");
-  return true;
+  return int_cast_to_type(opt, receiver, result, "ILong");
 }
 
 bool int_isize(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result)
 {
   pony_assert(ast_id(args) == TK_NONE);
-  *result = ast_dup(receiver);
-  int_cast_to_type(opt, result, "ISize");
-  return true;
+  return int_cast_to_type(opt, receiver, result, "ISize");
 }
 
 bool int_u8(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result)
 {
   pony_assert(ast_id(args) == TK_NONE);
-  *result = ast_dup(receiver);
-  int_cast_to_type(opt, result, "U8");
-  return true;
+  return int_cast_to_type(opt, receiver, result, "U8");
 }
 
 bool int_u16(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result)
 {
   pony_assert(ast_id(args) == TK_NONE);
-  *result = ast_dup(receiver);
-  int_cast_to_type(opt, result, "U16");
-  return true;
+  return int_cast_to_type(opt, receiver, result, "U16");
 }
 
 bool int_u32(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result)
 {
   pony_assert(ast_id(args) == TK_NONE);
-  *result = ast_dup(receiver);
-  int_cast_to_type(opt, result, "U32");
-  return true;
+  return int_cast_to_type(opt, receiver, result, "U32");
 }
 
 bool int_u64(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result)
 {
   pony_assert(ast_id(args) == TK_NONE);
-  *result = ast_dup(receiver);
-  int_cast_to_type(opt, result, "U64");
-  return true;
+  return int_cast_to_type(opt, receiver, result, "U64");
 }
 
 bool int_u128(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result)
 {
   pony_assert(ast_id(args) == TK_NONE);
-  *result = ast_dup(receiver);
-  int_cast_to_type(opt, result, "U128");
-  return true;
+  return int_cast_to_type(opt, receiver, result, "U128");
 }
 
 bool int_ulong(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result)
 {
   pony_assert(ast_id(args) == TK_NONE);
-  *result = ast_dup(receiver);
-  int_cast_to_type(opt, result, "ULong");
-  return true;
+  return int_cast_to_type(opt, receiver, result, "ULong");
 }
 
 bool int_usize(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result)
 {
   pony_assert(ast_id(args) == TK_NONE);
-  *result = ast_dup(receiver);
-  int_cast_to_type(opt, result, "USize");
-  return true;
+  return int_cast_to_type(opt, receiver, result, "USize");
 }
