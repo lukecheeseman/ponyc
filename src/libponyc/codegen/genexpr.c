@@ -187,6 +187,10 @@ LLVMValueRef gen_expr(compile_t* c, ast_t* ast)
       ret = gen_digestof(c, ast);
       break;
 
+    case TK_CONSTANT_OBJECT:
+      ret = gen_constant_object(c, ast);
+      break;
+
     case TK_COMPILE_INTRINSIC:
       ast_error(c->opt->check.errors, ast, "unimplemented compile intrinsic");
       return NULL;

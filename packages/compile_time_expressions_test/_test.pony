@@ -29,8 +29,8 @@ actor Main is TestList
     test(_TestFunctionCallWithNamedArgs)
     test(_TestRecursiveFunction)
     test(_TestParametricFunction)
-    /*
     test(_TestCompileTimeObjectField)
+    /*
     test(_TestCompileTimeObjectMethod)
     test(_TestCompileTimeObjectEmbeddedField)
     test(_TestCompileTimeTuples)
@@ -436,20 +436,42 @@ class iso _TestParametricFunction is UnitTest
     h.assert_eq[U32](#foo[U32](9), foo[U32](9))
     h.assert_eq[Bool](#foo[Bool](true), foo[Bool](true))
 
-/*
-class ClassWithField
+class ClassWithField is (Equatable[ClassWithField] & Stringable)
   let f: U32
 
-  new val create(f': U32) => f = f'
+  fun eq(o: ClassWithField box): Bool => f == o.f
+
+  fun string(): String iso^ => f.string()
+
+  new create(f': U32) => f = f'
 
 class iso _TestCompileTimeObjectField is UnitTest
 
-  fun name(): String => "CompileTimeEfpression/CompileTimeObjectField"
+  fun name(): String => "CompileTimeExression/CompileTimeObjectField"
 
   fun apply(h: TestHelper) =>
-    h.assert_eq[U32](#(ClassWithField(48).f), ClassWithField(48).f)
-    h.assert_eq[U32](#(ClassWithField(48)).f, ClassWithField(48).f)
+    h.assert_eq[ClassWithField val]((#ClassWithField(48)), recover val ClassWithField(48) end)
+    h.assert_eq[U32]((#ClassWithField(48)).f, ClassWithField(48).f)
 
+/*
+class ClassWithEmbeddedField
+  embed ef: ClassWithField val
+
+  fun eq(o: ClassWithEmbeddedField box): Bool => f == o.f
+
+  new val create(f: U32) => ef = ClassWithField(f)
+
+class iso _TestCompileTimeObjectField is UnitTest
+
+  fun name(): String => "CompileTimeExression/CompileTimeObjectField"
+
+  fun apply(h: TestHelper) =>
+    h.assert_eq[ClassWithField]((#ClassWithEmbeddedField(48)),
+                                ClassWithEmbeddedField(48))
+    h.assert_eq[U32]((#ClassWithField(48)).f, ClassWithField(48).f)
+*/
+
+/*
 class ClassWithFieldAndApply
   let f: U32
 

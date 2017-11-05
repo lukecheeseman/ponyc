@@ -488,7 +488,8 @@ RULE(constant_expr,
 RULE(constant_object,
   IS_SCOPE
   HAS_TYPE(type)
-  CHILD(id),
+  CHILD(id)
+  ZERO_OR_MORE(field),
   TK_CONSTANT_OBJECT);
 
 GROUP(type,

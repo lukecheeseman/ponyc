@@ -3,6 +3,7 @@
 #include <type/subtype.h>
 #include "util.h"
 
+#define TEST_COMPILE(src) DO(test_compile(src, "codegen"))
 #define TEST_EVALUATE_COMPILE(src) DO(test_compile(src, "evaluate"))
 #define TEST_TYPE_COMPILE(src) DO(test_compile(src, "expr"))
 #define TEST_ERROR(src) DO(test_error(src, "evaluate"))
@@ -124,18 +125,16 @@ TEST_F(CompileTimeExpressionTest, CompileTimeErrorNotPartial)
 
 TEST_F(CompileTimeExpressionTest, CompileTimeCompileTimeObjectEvaluates)
 {
-  // This test is designed to ensure the compile-time object doesn't raise an
-  // error during evaluation. Not that a valid object gets created in the
-  // backend.
   const char* src =
     "class C1\n"
     "  let x: U32 = 2\n"
     "\n"
     "actor Main\n"
     "  new create(env: Env) =>\n"
-    "    let c = # C1";
+    "    let c: C1 val = # C1";
 
   TEST_EVALUATE_COMPILE(src);
+  TEST_COMPILE(src);
 }
 
 TEST_F(CompileTimeExpressionTest, CompileTimeCompileTimeObjectWithVarField)
@@ -150,6 +149,19 @@ TEST_F(CompileTimeExpressionTest, CompileTimeCompileTimeObjectWithVarField)
     "actor Main\n"
     "  new create(env: Env) =>\n"
     "    let c = # C1";
+
+  TEST_ERROR(src);
+}
+
+TEST_F(CompileTimeExpressionTest, CompileTimeCompileTimeResultIsVal)
+{
+  const char* src =
+    "class C1\n"
+    "  let x: U32 = 2\n"
+    "\n"
+    "actor Main\n"
+    "  new create(env: Env) =>\n"
+    "    let c: C1 ref = # C1";
 
   TEST_ERROR(src);
 }

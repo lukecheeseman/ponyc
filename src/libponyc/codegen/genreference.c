@@ -578,3 +578,38 @@ LLVMValueRef gen_string(compile_t* c, ast_t* ast)
 
   return g_inst;
 }
+
+LLVMValueRef gen_constant_object(compile_t* c, ast_t* ast)
+{
+  ast_t* type = ast_type(ast);
+  const char* object_name = ast_name(ast_child(ast));
+  LLVMValueRef object = LLVMGetNamedGlobal(c->module, object_name);
+  if(object != NULL)
+    return object;
+
+  AST_GET_CHILDREN(type, package, id);
+  reach_type_t* t = reach_type(c->reach, type);
+
+  uint32_t field_count = t->field_count + 1;
+  LLVMValueRef args[field_count];
+
+  compile_type_t* c_t = (compile_type_t*)t->c_type;
+  args[0] = c_t->desc;
+
+  uint32_t field = 0;
+  for(ast_t* member = ast_childidx(ast, 1);
+      member != NULL;
+      field++, member = ast_sibling(member))
+  {
+      ast_t* member_value = ast_getvalue(ast, ast_name(ast_child(member)));
+      args[field + 1] = gen_expr(c, member_value);
+  }
+  pony_assert(field == t->field_count);
+
+  LLVMValueRef inst = LLVMConstNamedStruct(c_t->structure, args, field_count);
+  LLVMValueRef g_inst = LLVMAddGlobal(c->module, c_t->structure, object_name);
+  LLVMSetInitializer(g_inst, inst);
+  LLVMSetGlobalConstant(g_inst, true);
+  LLVMSetLinkage(g_inst, LLVMInternalLinkage);
+  return g_inst;
+}
