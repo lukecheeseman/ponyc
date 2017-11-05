@@ -64,6 +64,7 @@ void ast_scope(ast_t* ast);
 bool ast_has_scope(ast_t* ast);
 void ast_set_scope(ast_t* ast, ast_t* scope);
 symtab_t* ast_get_symtab(ast_t* ast);
+void ast_set_symtab(ast_t* ast, symtab_t* symtav);
 ast_t* ast_setid(ast_t* ast, token_id id);
 void ast_setpos(ast_t* ast, source_t* source, size_t line, size_t pos);
 

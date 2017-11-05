@@ -1,9 +1,12 @@
 #include "evaluate.h"
 #include "builtin/method_table.h"
+#include "../ast/astbuild.h"
 #include "../ast/lexer.h"
+#include "../ast/printbuf.h"
 #include "../type/assemble.h"
 #include "../type/lookup.h"
 #include "../type/reify.h"
+#include "../pkg/package.h"
 #include "ponyassert.h"
 
 void evaluate_init(pass_opt_t* opt)
@@ -27,7 +30,7 @@ bool expr_constant(pass_opt_t* opt, ast_t* ast)
  * method assumes that all mappings are valid, the method is provided as a
  * convenience to extract the identifier name.
  */
-static bool assign_value(pass_opt_t* opt, ast_t* left, ast_t* right,
+static void assign_value(pass_opt_t* opt, ast_t* left, ast_t* right,
   ast_t** result)
 {
   (void) opt;
@@ -41,14 +44,23 @@ static bool assign_value(pass_opt_t* opt, ast_t* left, ast_t* right,
     case TK_LET:
     case TK_PARAM:
       pony_assert(ast_setvalue(left, ast_name(ast_child(left)), right, result));
-      return true;
+      return;
+
+    case TK_FLETREF:
+    case TK_FVARREF:
+    {
+      const char* name = ast_name(ast_childidx(left, 1));
+      pony_assert(ast_setvalue(left, name, right, result));
+      return;
+    }
 
     default:
-      return false;
+      pony_assert(0);
   }
 }
 
 // Bind a value so that it can be used in later compile-time expressions
+// FIXME: We should also be able bind a let field
 static bool bind_value(pass_opt_t* opt, ast_t* left, ast_t* right,
   ast_t** result)
 {
@@ -60,9 +72,43 @@ static bool bind_value(pass_opt_t* opt, ast_t* left, ast_t* right,
   if(left_id == TK_VAR || left_id == TK_VARREF)
     return false;
 
-  return assign_value(opt, left, right, result);
+  assign_value(opt, left, right, result);
+  return true;
 }
 
+static void construct_object_hygienic_name(printbuf_t* buf, pass_opt_t* opt,
+  ast_t* type)
+{
+  switch(ast_id(type))
+  {
+    case TK_NOMINAL:
+    {
+      const char* type_name = ast_name(ast_childidx(type, 1));
+      ast_t* def = ast_get(type, type_name, NULL);
+
+      frame_push(&opt->check, ast_nearest(def, TK_PACKAGE));
+      const char* s = package_hygienic_id(&opt->check);
+      frame_pop(&opt->check);
+
+      printbuf(buf, "%s_%s", type_name, s);
+      return;
+    }
+
+    default:
+      pony_assert(0);
+      return;
+  }
+}
+
+// Generate a hygienic name for an object of a given type
+static const char* object_hygienic_name(pass_opt_t* opt, ast_t* type)
+{
+  printbuf_t* buf = printbuf_new();
+  construct_object_hygienic_name(buf, opt, type);
+  const char* r = stringtab(buf->m);
+  printbuf_free(buf);
+  return r;
+}
 
 static bool evaluate(pass_opt_t* opt, ast_t* expression, ast_t** result);
 
@@ -147,6 +193,45 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* expression,
   if(!evaluate(opt, method_body, result))
     return false;
 
+  // If the method is a constructor then we need to build a compile time object
+  // adding the values of the fields as the children and setting the type
+  // to be the return type of the function body
+  if(ast_id(method) == TK_NEW)
+  {
+    const char* type_name = ast_name(ast_childidx(receiver_type, 1));
+    const char* object_name = object_hygienic_name(opt, receiver_type);
+
+    ast_t* class_def = ast_get(expression, type_name, NULL);
+    pony_assert(class_def != NULL);
+
+    if(ast_id(class_def) == TK_ACTOR)
+    {
+      ast_error(opt->check.errors, method,
+                "cannot construct compile-time actors");
+      return false;
+    }
+
+    // Get the return type
+    ast_t* return_type = ast_childidx(ast_type(expression), 3);
+    BUILD_NO_DECL(*result, expression,
+      NODE(TK_CONSTANT_OBJECT, ID(object_name)))
+    ast_set_symtab(*result, symtab_dup(ast_get_symtab(method)));
+    ast_settype(*result, ast_dup(return_type));
+
+    ast_t* members = ast_childidx(class_def, 4);
+    ast_t* member = ast_child(members);
+    while(member != NULL)
+    {
+      if(ast_id(member) == TK_FVAR)
+      {
+        ast_error(opt->check.errors, member,
+                  "compile time objects fields must be read-only");
+        return false;
+      }
+      member = ast_sibling(member);
+    }
+  }
+
   return true;
 }
 
@@ -181,8 +266,11 @@ static bool evaluate(pass_opt_t* opt, ast_t* expression, ast_t** result)
       AST_GET_CHILDREN(expression, left, right);
 
       ast_t* evaluated_right;
-      return evaluate(opt, right, &evaluated_right) &&
-             assign_value(opt, left, evaluated_right, result);
+      if(!evaluate(opt, right, &evaluated_right))
+        return false;
+
+      assign_value(opt, left, evaluated_right, result);
+      return true;
     }
 
     // Variable lookups, checking that the variable has been bound to a value.

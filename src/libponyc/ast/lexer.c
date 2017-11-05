@@ -118,7 +118,6 @@ static const lextoken_t symbols[] =
 
   { "?", TK_QUESTION },
   { "-", TK_UNARY_MINUS },
-  { "#", TK_CONSTANT },
 
   { "(", TK_LPAREN_NEW },
   { "[", TK_LSQUARE_NEW },
@@ -305,6 +304,8 @@ static const lextoken_t abstract[] =
   { "funchain", TK_FUNCHAIN },
 
   { "annotation", TK_ANNOTATION },
+
+  { "constant_object", TK_CONSTANT_OBJECT },
 
   { "\\n", TK_NEWLINE },
   {NULL, (token_id)0}

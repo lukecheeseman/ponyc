@@ -121,3 +121,35 @@ TEST_F(CompileTimeExpressionTest, CompileTimeErrorNotPartial)
 
   TEST_EVALUATE_COMPILE(src);
 }
+
+TEST_F(CompileTimeExpressionTest, CompileTimeCompileTimeObjectEvaluates)
+{
+  // This test is designed to ensure the compile-time object doesn't raise an
+  // error during evaluation. Not that a valid object gets created in the
+  // backend.
+  const char* src =
+    "class C1\n"
+    "  let x: U32 = 2\n"
+    "\n"
+    "actor Main\n"
+    "  new create(env: Env) =>\n"
+    "    let c = # C1";
+
+  TEST_EVALUATE_COMPILE(src);
+}
+
+TEST_F(CompileTimeExpressionTest, CompileTimeCompileTimeObjectWithVarField)
+{
+  // This test is designed to ensure the compile-time object doesn't raise an
+  // error during evaluation. Not that a valid object gets created in the
+  // backend.
+  const char* src =
+    "class C1\n"
+    "  var x: U32 = 2\n"
+    "\n"
+    "actor Main\n"
+    "  new create(env: Env) =>\n"
+    "    let c = # C1";
+
+  TEST_ERROR(src);
+}

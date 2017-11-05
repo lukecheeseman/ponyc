@@ -145,7 +145,7 @@ GROUP(expr,
   lambda, barelambda, array_literal, object_literal, int_literal, float_literal,
   string, bool_literal, id, rawseq, package_ref, location,
   this_ref, ref, fun_ref, type_ref, field_ref, tuple_elem_ref, local_ref,
-  param_ref, constant_expr);
+  param_ref, constant_expr, constant_object);
 
 RULE(local,
   HAS_TYPE(type)
@@ -485,6 +485,11 @@ RULE(constant_expr,
   CHILD(expr),
   TK_CONSTANT);
 
+RULE(constant_object,
+  IS_SCOPE
+  HAS_TYPE(type)
+  CHILD(id),
+  TK_CONSTANT_OBJECT);
 
 GROUP(type,
   type_infix, type_tuple, type_arrow, type_this, cap, nominal,
