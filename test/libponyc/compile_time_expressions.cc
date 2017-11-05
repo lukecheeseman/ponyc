@@ -109,6 +109,18 @@ TEST_F(CompileTimeExpressionTest, CompileTimeError)
   TEST_ERROR(src);
 }
 
+TEST_F(CompileTimeExpressionTest, CompileTimeFunctionMissingArgs)
+{
+  const char* src =
+    "actor Main\n"
+    "  fun foo(n: U32): U32 => n\n"
+    "\n"
+    "  new create(env: Env) =>\n"
+    "    let x: U32 = # foo()";
+
+  TEST_ERROR(src);
+}
+
 TEST_F(CompileTimeExpressionTest, CompileTimeErrorNotPartial)
 {
   // Test that evaluating an expression at compile-time means
