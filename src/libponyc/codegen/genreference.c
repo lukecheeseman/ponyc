@@ -589,6 +589,7 @@ LLVMValueRef gen_constant_object(compile_t* c, ast_t* ast)
 
   AST_GET_CHILDREN(type, package, id);
   reach_type_t* t = reach_type(c->reach, type);
+  pony_assert(t != NULL);
 
   uint32_t field_count = t->field_count + 1;
   LLVMValueRef args[field_count];
@@ -602,6 +603,7 @@ LLVMValueRef gen_constant_object(compile_t* c, ast_t* ast)
       field++, member = ast_sibling(member))
   {
       ast_t* member_value = ast_getvalue(ast, ast_name(ast_child(member)));
+      pony_assert(member_value != NULL);
       args[field + 1] = gen_expr(c, member_value);
   }
   pony_assert(field == t->field_count);

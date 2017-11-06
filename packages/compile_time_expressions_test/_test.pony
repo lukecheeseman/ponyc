@@ -443,15 +443,52 @@ class ClassWithField is (Equatable[ClassWithField] & Stringable)
 
   fun string(): String iso^ => f.string()
 
-  new create(f': U32) => f = f'
+  new iso create(f': U32) => f = consume f'
 
 class iso _TestCompileTimeObjectField is UnitTest
 
   fun name(): String => "CompileTimeExression/CompileTimeObjectField"
 
   fun apply(h: TestHelper) =>
-    h.assert_eq[ClassWithField val]((#ClassWithField(48)), recover val ClassWithField(48) end)
+    h.assert_eq[ClassWithField val]((#ClassWithField(48)),
+                                    ClassWithField(48))
     h.assert_eq[U32]((#ClassWithField(48)).f, ClassWithField(48).f)
+
+class ClassWithVarField is (Equatable[ClassWithVarField] & Stringable)
+  var f: U32
+
+  fun eq(o: ClassWithVarField box): Bool => f == o.f
+
+  fun string(): String iso^ => f.string()
+
+  new iso create(f': U32) => f = consume f'
+
+class iso _TestCompileTimeObjectVarField is UnitTest
+
+  fun name(): String => "CompileTimeExression/CompileTimeObjectVarField"
+
+  fun apply(h: TestHelper) =>
+    h.assert_eq[ClassWithVarField val]((#ClassWithVarField(48)),
+                                       ClassWithVarField(48))
+    h.assert_eq[ClassWithVarField val](
+      (# (let c = ClassWithVarField(48)
+          c.f = 13
+          consume c)),
+      (let c = ClassWithVarField(48)
+       c.f = 13
+       consume c)
+      )
+
+    h.assert_eq[U32]((#ClassWithVarField(48)).f,
+                     ClassWithVarField(48).f)
+    h.assert_eq[U32](
+      (# (let c' = ClassWithVarField(48)
+          c'.f = 13
+          consume c')).f,
+      (let c' = ClassWithVarField(48)
+       c'.f = 13
+       consume c').f
+      )
 
 /*
 class ClassWithEmbeddedField

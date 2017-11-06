@@ -151,9 +151,6 @@ TEST_F(CompileTimeExpressionTest, CompileTimeCompileTimeObjectEvaluates)
 
 TEST_F(CompileTimeExpressionTest, CompileTimeCompileTimeObjectWithVarField)
 {
-  // This test is designed to ensure the compile-time object doesn't raise an
-  // error during evaluation. Not that a valid object gets created in the
-  // backend.
   const char* src =
     "class C1\n"
     "  var x: U32 = 2\n"
@@ -162,7 +159,22 @@ TEST_F(CompileTimeExpressionTest, CompileTimeCompileTimeObjectWithVarField)
     "  new create(env: Env) =>\n"
     "    let c = # C1";
 
-  TEST_ERROR(src);
+  TEST_COMPILE(src);
+}
+
+TEST_F(CompileTimeExpressionTest, CompileTimeCompileTimeObjectVarFieldReassign)
+{
+  const char* src =
+    "class C1\n"
+    "  var x: U32 = 2\n"
+    "\n"
+    "actor Main\n"
+    "  new create(env: Env) =>\n"
+    "    let c = # (let o = C1\n"
+    "     o.x = 2\n"
+    "     consume o)";
+
+  TEST_COMPILE(src);
 }
 
 TEST_F(CompileTimeExpressionTest, CompileTimeCompileTimeResultIsVal)
@@ -176,4 +188,18 @@ TEST_F(CompileTimeExpressionTest, CompileTimeCompileTimeResultIsVal)
     "    let c: C1 ref = # C1";
 
   TEST_ERROR(src);
+}
+
+TEST_F(CompileTimeExpressionTest, CompileTimeCompileTimeObjectNoAlias)
+{
+  // Test that the reach type is added for C1
+  const char* src =
+    "class C1\n"
+    "  let x: U32 = 2\n"
+    "\n"
+    "actor Main\n"
+    "  new create(env: Env) =>\n"
+    "    # C1";
+
+  TEST_COMPILE(src);
 }

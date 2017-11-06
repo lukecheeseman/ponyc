@@ -151,11 +151,16 @@ ast_t* symtab_find_value(symtab_t* symtab, const char* name, sym_status_t* statu
 
 bool symtab_set_value(symtab_t* symtab, const char* name, ast_t* value)
 {
+  pony_assert(value != NULL);
   symbol_t* s = symtab_find_symbol(symtab, name, NULL);
   if(s == NULL)
     return false;
 
-  s->value = value;
+  // Make a copy of the value, the value may not live anywhere else in the ast
+  // and is subject to being freed (e.g. when replacing an expression with
+  // constant object).
+  // TODO: memory leak?
+  s->value = ast_dup(value);
   return true;
 }
 
