@@ -1172,6 +1172,8 @@ static void reachable_expr(reach_t* r, deferred_reification_t* reify,
     case TK_FVARREF:
     case TK_EMBEDREF:
     case TK_TUPLE:
+    case TK_CONSTANT:
+    case TK_CONSTANT_OBJECT:
     {
       ast_t* type = deferred_reify(reify, ast_type(ast), opt);
       add_type(r, type, opt);
