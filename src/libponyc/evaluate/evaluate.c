@@ -147,21 +147,37 @@ static const char* object_hygienic_name(pass_opt_t* opt, ast_t* type)
   return r;
 }
 
-static bool evaluate_method(pass_opt_t* opt, ast_t* expression,
-  ast_t* arguments, ast_t** result)
+static bool evaluate_method(pass_opt_t* opt, ast_t* expression, ast_t** result)
 {
   pony_assert(expression != NULL);
+  AST_GET_CHILDREN(expression, postfix, positional, named, question);
+
+  // Named arguments have already been converted to positional
+  pony_assert(ast_id(named) == TK_NONE);
+
+  // Build up the evaluated arguments
+  ast_t* evaluated_args = ast_from(positional, ast_id(positional));
+  ast_t* argument = ast_child(positional);
+  while(argument != NULL)
+  {
+    ast_t* evaluated_arg;
+    if(!evaluate(opt, argument, &evaluated_arg))
+      return false;
+
+    ast_append(evaluated_args, evaluated_arg);
+    argument = ast_sibling(argument);
+  }
 
   // Check if this is a parametric function type and if so keep hold
   // of the typeargs for later.
   ast_t* typeargs = NULL;
-  if(ast_id(ast_childidx(expression, 1)) == TK_TYPEARGS)
+  if(ast_id(ast_childidx(postfix, 1)) == TK_TYPEARGS)
   {
-    typeargs = ast_childidx(expression, 1);
-    expression = ast_child(expression);
+    typeargs = ast_childidx(postfix, 1);
+    postfix = ast_child(postfix);
   }
 
-  AST_GET_CHILDREN(expression, receiver, method_id);
+  AST_GET_CHILDREN(postfix, receiver, method_id);
 
   ast_t* evaluated_receiver;
   if(!evaluate(opt, receiver, &evaluated_receiver))
@@ -177,13 +193,13 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* expression,
   method_ptr_t builtin_method
     = methodtab_lookup(evaluated_receiver, receiver_type, ast_name(method_id));
   if(builtin_method != NULL)
-    return builtin_method(opt, evaluated_receiver, arguments, result);
+    return builtin_method(opt, evaluated_receiver, evaluated_args, result);
 
   // We cannot evaluate compile-time behaviours, we shouldn't get here as we
   // cannot construct compile-time actors.
-  if(ast_id(expression) == TK_BEREF)
+  if(ast_id(postfix) == TK_BEREF)
   {
-    ast_error(opt->check.errors, expression,
+    ast_error(opt->check.errors, postfix,
               "cannot evaluate compile-time behaviours");
     return false;
   }
@@ -192,7 +208,8 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* expression,
   // we push the package from where the function came from so that the lookup
   // proceeds as if we were in the correct package as we may, through private
   // methods within public methods, require access to private memebers.
-  ast_t* def = ast_get(expression, ast_name(ast_childidx(receiver_type, 1)), NULL);
+  ast_t* def
+    = ast_get(postfix, ast_name(ast_childidx(receiver_type, 1)), NULL);
   frame_push(&opt->check, ast_nearest(def, TK_PACKAGE));
   deferred_reification_t* method_def = lookup(opt, def, receiver_type,
                                               ast_name(method_id));
@@ -211,15 +228,15 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* expression,
     pony_assert(method != NULL);
   }
 
-  // Evaluate all the arguments and assign them to the repsecitive paramter
+  // Evaluate all the arguments and assign them to the repsective paramter
   // names
   ast_t* parameters = ast_childidx(method, 3);
   ast_t* parameter = ast_child(parameters);
-  ast_t* argument = ast_child(arguments);
-  while(argument != NULL)
+  ast_t* evaluated_arg = ast_child(evaluated_args);
+  while(evaluated_arg != NULL)
   {
-    assign_value(opt, parameter, argument, NULL);
-    argument = ast_sibling(argument);
+    assign_value(opt, parameter, evaluated_arg, NULL);
+    evaluated_arg = ast_sibling(evaluated_arg);
     parameter = ast_sibling(parameter);
   }
 
@@ -236,7 +253,7 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* expression,
     const char* type_name = ast_name(ast_childidx(receiver_type, 1));
     const char* object_name = object_hygienic_name(opt, receiver_type);
 
-    ast_t* class_def = ast_get(expression, type_name, NULL);
+    ast_t* class_def = ast_get(postfix, type_name, NULL);
     pony_assert(class_def != NULL);
 
     if(ast_id(class_def) == TK_ACTOR)
@@ -247,7 +264,7 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* expression,
     }
 
     // Get the return type
-    ast_t* return_type = ast_childidx(ast_type(expression), 3);
+    ast_t* return_type = ast_childidx(ast_type(postfix), 3);
     BUILD_NO_DECL(*result, expression,
       NODE(TK_CONSTANT_OBJECT, ID(object_name)))
     ast_set_symtab(*result, symtab_dup(ast_get_symtab(method)));
@@ -293,13 +310,20 @@ static bool evaluate(pass_opt_t* opt, ast_t* expression, ast_t** result)
     case TK_INT:
     case TK_FLOAT:
     case TK_ERROR:
-    case TK_STRING:
       *result = expression;
       return true;
 
     case TK_TYPEREF:
       *result = expression;
       return true;
+
+    // String literals are a bit special; we want to construct an object with
+    // all of the fields.
+    case TK_STRING:
+    {
+      pony_assert(0);
+
+    }
 
    // FVARREF may seem unintuitive to add but in fact it's safe due to the deep
    // immutability of val. Once we have constructed a compile-time object it
@@ -369,27 +393,7 @@ static bool evaluate(pass_opt_t* opt, ast_t* expression, ast_t** result)
     }
 
     case TK_CALL:
-    {
-      AST_GET_CHILDREN(expression, postfix, positional, named, question);
-
-      // Named arguments have already been converted to positional
-      pony_assert(ast_id(named) == TK_NONE);
-
-      // Build up the evaluated arguments
-      ast_t* evaluated_args = ast_from(positional, ast_id(positional));
-      ast_t* argument = ast_child(positional);
-      while(argument != NULL)
-      {
-        ast_t* evaluated_arg;
-        if(!evaluate(opt, argument, &evaluated_arg))
-          return false;
-
-        ast_append(evaluated_args, evaluated_arg);
-        argument = ast_sibling(argument);
-      }
-
-      return evaluate_method(opt, postfix, evaluated_args, result);
-    }
+      return evaluate_method(opt, expression, result);
 
     case TK_THIS:
       *result = expression;
