@@ -54,15 +54,16 @@ bool expr_constant(pass_opt_t* opt, ast_t* ast)
   return true;
 }
 
-static bool evaluate(pass_opt_t* opt, ast_t* expression, ast_t** result);
+static bool evaluate(pass_opt_t* opt, ast_t* this, ast_t* expression,
+  ast_t** result);
 
 /*
  * Construct a mapping from the given lhs identifier to the rhs value. This
  * method assumes that all mappings are valid, the method is provided as a
  * convenience to extract the identifier name.
  */
-static void assign_value(pass_opt_t* opt, ast_t* left, ast_t* right,
-  ast_t** result)
+static void assign_value(pass_opt_t* opt, ast_t* this, ast_t* left,
+  ast_t* right, ast_t** result)
 {
   (void) opt;
   pony_assert(left != NULL);
@@ -84,7 +85,7 @@ static void assign_value(pass_opt_t* opt, ast_t* left, ast_t* right,
       AST_GET_CHILDREN(left, receiver, id);
 
       ast_t* evaluated_receiver;
-      evaluate(opt, receiver, &evaluated_receiver);
+      evaluate(opt, this, receiver, &evaluated_receiver);
       pony_assert(evaluated_receiver != NULL);
 
       pony_assert(ast_setvalue(evaluated_receiver, ast_name(id), right, result));
@@ -109,7 +110,7 @@ static bool bind_value(pass_opt_t* opt, ast_t* left, ast_t* right,
   if(left_id == TK_VAR || left_id == TK_VARREF)
     return false;
 
-  assign_value(opt, left, right, result);
+  assign_value(opt, NULL, left, right, result);
   return true;
 }
 
@@ -147,7 +148,8 @@ static const char* object_hygienic_name(pass_opt_t* opt, ast_t* type)
   return r;
 }
 
-static bool evaluate_method(pass_opt_t* opt, ast_t* expression, ast_t** result)
+static bool evaluate_method(pass_opt_t* opt, ast_t* this, ast_t* expression,
+  ast_t** result)
 {
   pony_assert(expression != NULL);
   AST_GET_CHILDREN(expression, postfix, positional, named, question);
@@ -161,7 +163,7 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* expression, ast_t** result)
   while(argument != NULL)
   {
     ast_t* evaluated_arg;
-    if(!evaluate(opt, argument, &evaluated_arg))
+    if(!evaluate(opt, this, argument, &evaluated_arg))
       return false;
 
     ast_append(evaluated_args, evaluated_arg);
@@ -180,7 +182,7 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* expression, ast_t** result)
   AST_GET_CHILDREN(postfix, receiver, method_id);
 
   ast_t* evaluated_receiver;
-  if(!evaluate(opt, receiver, &evaluated_receiver))
+  if(!evaluate(opt, this, receiver, &evaluated_receiver))
     return false;
 
   ast_t* receiver_type = ast_type(evaluated_receiver);
@@ -235,65 +237,73 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* expression, ast_t** result)
   ast_t* evaluated_arg = ast_child(evaluated_args);
   while(evaluated_arg != NULL)
   {
-    assign_value(opt, parameter, evaluated_arg, NULL);
+    assign_value(opt, this, parameter, evaluated_arg, NULL);
     evaluated_arg = ast_sibling(evaluated_arg);
     parameter = ast_sibling(parameter);
   }
 
   // Now in a position to evaluate the body
   ast_t* method_body = ast_childidx(method, 6);
-  if(!evaluate(opt, method_body, result))
-    return false;
+
+  if(ast_id(method) != TK_NEW)
+    return evaluate(opt, evaluated_receiver, method_body, result);
 
   // If the method is a constructor then we need to build a compile time object
   // adding the values of the fields as the children and setting the type
   // to be the return type of the function body
-  if(ast_id(method) == TK_NEW)
+  const char* type_name = ast_name(ast_childidx(receiver_type, 1));
+  const char* object_name = object_hygienic_name(opt, receiver_type);
+
+  ast_t* class_def = ast_get(postfix, type_name, NULL);
+  pony_assert(class_def != NULL);
+
+  if(ast_id(class_def) == TK_ACTOR)
   {
-    const char* type_name = ast_name(ast_childidx(receiver_type, 1));
-    const char* object_name = object_hygienic_name(opt, receiver_type);
-
-    ast_t* class_def = ast_get(postfix, type_name, NULL);
-    pony_assert(class_def != NULL);
-
-    if(ast_id(class_def) == TK_ACTOR)
-    {
-      ast_error(opt->check.errors, method,
-                "cannot construct compile-time actors");
-      return false;
-    }
-
-    // Get the return type
-    ast_t* return_type = ast_childidx(ast_type(postfix), 3);
-    BUILD_NO_DECL(*result, expression,
-      NODE(TK_CONSTANT_OBJECT, ID(object_name)))
-    ast_set_symtab(*result, symtab_dup(ast_get_symtab(method)));
-    ast_settype(*result, ast_dup(return_type));
-
-    ast_t* members = ast_childidx(class_def, 4);
-    ast_t* member = ast_child(members);
-    while(member != NULL)
-    {
-      token_id member_id = ast_id(member);
-      // Store all the fields that appear in this object, their values can be
-      // found in the symbol table.
-      if(member_id == TK_FVAR || member_id == TK_FLET || member_id == TK_EMBED)
-      {
-        ast_append(*result, member);
-        ast_t* member_value = ast_getvalue(*result, ast_name(ast_child(member)));
-        pony_assert(member_value != NULL);
-      }
-
-      member = ast_sibling(member);
-    }
+    ast_error(opt->check.errors, method,
+              "cannot construct compile-time actors");
+    return false;
   }
 
+  ast_t* return_type = ast_childidx(ast_type(postfix), 3);
+
+  BUILD_NO_DECL(*result, postfix,
+    NODE(TK_CONSTANT_OBJECT, AST_SCOPE ID(object_name)))
+  ast_settype(*result, ast_dup(return_type));
+
+  ast_t* members = ast_childidx(class_def, 4);
+  ast_t* member = ast_child(members);
+  while(member != NULL)
+  {
+    token_id member_id = ast_id(member);
+    // Store all the fields that appear in this object, their values can be
+    // found in the symbol table.
+    if(member_id == TK_FVAR || member_id == TK_FLET || member_id == TK_EMBED)
+    {
+      sym_status_t s;
+      ast_t* member_ast = ast_get(method, ast_name(ast_child(member)), &s);
+      pony_assert(member_ast != NULL);
+
+      pony_assert(ast_set(*result, ast_name(ast_child(member)), member_ast, s,
+                  false));
+      ast_append(*result, member);
+    }
+
+    member = ast_sibling(member);
+  }
+
+  // Now run the constructor to initialise the fields etc.
+  this = *result;
+  if(!evaluate(opt, this, method_body, result))
+    return false;
+
+  *result = this;
   return true;
 }
 
 // TODO: we will need to carry around information about what _this_ is so that
 // we can evaluate methods and field lookups
-static bool evaluate(pass_opt_t* opt, ast_t* expression, ast_t** result)
+static bool evaluate(pass_opt_t* opt, ast_t* this, ast_t* expression,
+  ast_t** result)
 {
   pony_assert(expression != NULL);
 
@@ -301,7 +311,7 @@ static bool evaluate(pass_opt_t* opt, ast_t* expression, ast_t** result)
   {
     // Get and evaluate the inner expression
     case TK_CONSTANT:
-      return evaluate(opt, ast_child(expression), result);
+      return evaluate(opt, this, ast_child(expression), result);
 
     // Literal cases where we can return the value
     case TK_NONE:
@@ -334,7 +344,7 @@ static bool evaluate(pass_opt_t* opt, ast_t* expression, ast_t** result)
     {
       AST_GET_CHILDREN(expression, receiver, id);
       ast_t* evaluated_receiver;
-      if(!evaluate(opt, receiver, &evaluated_receiver))
+      if(!evaluate(opt, this, receiver, &evaluated_receiver))
         return false;
 
       *result = ast_getvalue(evaluated_receiver, ast_name(id));
@@ -344,20 +354,7 @@ static bool evaluate(pass_opt_t* opt, ast_t* expression, ast_t** result)
           "field is not a compile-time expression");
         return false;
       }
-
-      return true;
-    }
-
-    // Evaluating a destructive read
-    case TK_ASSIGN:
-    {
-      AST_GET_CHILDREN(expression, left, right);
-
-      ast_t* evaluated_right;
-      if(!evaluate(opt, right, &evaluated_right))
-        return false;
-
-      assign_value(opt, left, evaluated_right, result);
+      pony_assert(*result != NULL);
       return true;
     }
 
@@ -374,7 +371,20 @@ static bool evaluate(pass_opt_t* opt, ast_t* expression, ast_t** result)
           "variable is not a compile-time expression");
         return false;
       }
+      pony_assert(*result != NULL);
+      return true;
+    }
 
+    // Evaluating a destructive read
+    case TK_ASSIGN:
+    {
+      AST_GET_CHILDREN(expression, left, right);
+
+      ast_t* evaluated_right;
+      if(!evaluate(opt, this, right, &evaluated_right))
+        return false;
+
+      assign_value(opt, this, left, evaluated_right, result);
       return true;
     }
 
@@ -385,7 +395,7 @@ static bool evaluate(pass_opt_t* opt, ast_t* expression, ast_t** result)
       ast_t* evaluated;
       for(ast_t* p = ast_child(expression); p != NULL; p = ast_sibling(p))
       {
-        if(!evaluate(opt, p, &evaluated))
+        if(!evaluate(opt, this, p, &evaluated))
           return false;;
       }
       *result = evaluated;
@@ -393,10 +403,10 @@ static bool evaluate(pass_opt_t* opt, ast_t* expression, ast_t** result)
     }
 
     case TK_CALL:
-      return evaluate_method(opt, expression, result);
+      return evaluate_method(opt, this, expression, result);
 
     case TK_THIS:
-      *result = expression;
+      *result = this != NULL ? this : expression;
       return true;
 
     case TK_IF:
@@ -404,22 +414,22 @@ static bool evaluate(pass_opt_t* opt, ast_t* expression, ast_t** result)
     {
       AST_GET_CHILDREN(expression, condition, then_branch, else_branch);
       ast_t* evaluated_condition;
-      if(!evaluate(opt, condition, &evaluated_condition))
+      if(!evaluate(opt, this, condition, &evaluated_condition))
         return false;
 
       pony_assert(ast_id(evaluated_condition) == TK_TRUE ||
                   ast_id(evaluated_condition) == TK_FALSE);
 
       return ast_id(evaluated_condition) == TK_TRUE ?
-            evaluate(opt, then_branch, result):
-            evaluate(opt, else_branch, result);
+            evaluate(opt, this, then_branch, result):
+            evaluate(opt, this, else_branch, result);
     }
 
     case TK_WHILE:
     {
       AST_GET_CHILDREN(expression, condition, then_body, else_body);
       ast_t* evaluated_condition;
-      if(!evaluate(opt, condition, &evaluated_condition))
+      if(!evaluate(opt, this, condition, &evaluated_condition))
         return false;
 
       pony_assert(ast_id(evaluated_condition) == TK_TRUE ||
@@ -428,14 +438,14 @@ static bool evaluate(pass_opt_t* opt, ast_t* expression, ast_t** result)
       // The condition didn't hold on the first iteration so we evaluate the
       // else
       if(ast_id(evaluated_condition) == TK_FALSE)
-        return evaluate(opt, else_body, result);
+        return evaluate(opt, this, else_body, result);
 
       // The condition held so evaluate the while returning the iteration
       // result as the evaluated result
       while(ast_id(evaluated_condition) == TK_TRUE)
       {
-        if(!evaluate(opt, then_body, result) ||
-           !evaluate(opt, condition, &evaluated_condition))
+        if(!evaluate(opt, this, then_body, result) ||
+           !evaluate(opt, this, condition, &evaluated_condition))
           return false;
 
         pony_assert(ast_id(evaluated_condition) == TK_TRUE ||
@@ -451,20 +461,20 @@ static bool evaluate(pass_opt_t* opt, ast_t* expression, ast_t** result)
       // so test if this is the case after evaluation, if so evaluate the else
       // branch
       AST_GET_CHILDREN(expression, try_body, else_body);
-      if(!evaluate(opt, try_body, result))
+      if(!evaluate(opt, this, try_body, result))
         return false;
 
       if(ast_id(*result) == TK_ERROR)
-        return evaluate(opt, else_body, result);
+        return evaluate(opt, this, else_body, result);
 
       return true;
     }
 
     case TK_CONSUME:
-      return evaluate(opt, ast_childidx(expression, 1), result);
+      return evaluate(opt, this, ast_childidx(expression, 1), result);
 
     case TK_RECOVER:
-      return evaluate(opt, ast_childidx(expression, 1), result);
+      return evaluate(opt, this, ast_childidx(expression, 1), result);
 
     default:
       ast_error(opt->check.errors, expression,
@@ -487,7 +497,7 @@ ast_result_t pass_evaluate(ast_t** astp, pass_opt_t* options)
   if(ast_id(ast) == TK_CONSTANT)
   {
     ast_t* result;
-    if(!evaluate(options, ast, &result))
+    if(!evaluate(options, NULL, ast, &result))
     {
       pony_assert(errors_get_count(options->check.errors) > 0);
       return AST_ERROR;

@@ -490,6 +490,42 @@ class iso _TestCompileTimeObjectVarField is UnitTest
        consume c').f
       )
 
+class ClassWithFieldAndApply
+  let f: U32
+
+  new val create(f': U32) => f = f'
+
+  fun apply(): U32 => f + f + f
+
+class iso _TestCompileTimeObjectMethod is UnitTest
+
+  fun name(): String => "CompileTimeExpression/CompileTimeObjectMethod"
+
+  fun apply(h: TestHelper) =>
+    h.assert_eq[U32](#(ClassWithFieldAndApply(48)()),
+                     ClassWithFieldAndApply(48)())
+    h.assert_eq[U32](#(ClassWithFieldAndApply(48))(),
+                     ClassWithFieldAndApply(48)())
+
+class ClassWithVarFieldAndApply
+  var f: U32
+
+  new create(f': U32) => f = consume f'
+
+  fun ref apply() => f = 601
+
+class iso _TestCompileTimeObjectMethodWritesVar is UnitTest
+
+  fun name(): String => "CompileTimeExpression/CompileTimeObjectMethodWritesVar"
+
+  fun apply(h: TestHelper) =>
+    h.assert_eq[U32](#(let c = ClassWithVarFieldAndApply(48)
+                       c()
+                       c.f),
+                     (let c = ClassWithVarFieldAndApply(48)
+                      c()
+                      c.f))
+
 /*
 class ClassWithEmbeddedField
   embed ef: ClassWithField val
@@ -509,21 +545,6 @@ class iso _TestCompileTimeObjectField is UnitTest
 */
 
 /*
-class ClassWithFieldAndApply
-  let f: U32
-
-  new val create(f': U32) => f = f'
-
-  fun apply(): U32 => f + f + f
-
-class iso _TestCompileTimeObjectMethod is UnitTest
-
-  fun name(): String => "CompileTimeExpression/CompileTimeObjectMethod"
-
-  fun apply(h: TestHelper) =>
-    h.assert_eq[U32](#(ClassWithFieldAndApply(48)()), ClassWithFieldAndApply(48)())
-    h.assert_eq[U32](#(ClassWithFieldAndApply(48))(), ClassWithFieldAndApply(48)())
-
 class ClassWithEmbeddedField
   embed ef: ClassWithField val
 

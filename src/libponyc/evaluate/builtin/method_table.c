@@ -1,6 +1,7 @@
 #include "method_table.h"
-#include "builtin_int.h"
 #include "builtin_bool.h"
+#include "builtin_int.h"
+#include "builtin_pointer.h"
 #include "../../type/subtype.h"
 #include "../../../libponyrt/mem/pool.h"
 #include "../../../libponyrt/ds/hash.h"
