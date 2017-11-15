@@ -41,6 +41,7 @@ static void methodtab_add(const char* name, const char* type, method_ptr_t metho
   method_table_put(&method_table, method_dup(&m));
 }
 
+// TODO: let builtins register their own methods
 // Builds the method lookup table for the supported builting operations
 void methodtab_init()
 {
@@ -85,10 +86,7 @@ void methodtab_init()
   methodtab_add(stringtab("integer"), stringtab("ulong"), &int_ulong);
   methodtab_add(stringtab("integer"), stringtab("usize"), &int_usize);
 
-  /*
-  methodtab_add(stringtab("integer"), stringtab("f32"), &int_f32);
-  methodtab_add(stringtab("integer"), stringtab("f64"), &int_f64);
-  */
+  methodtab_add(stringtab("integer"), stringtab("clz"), &int_clz);
 
   //TODO: make the type names consistent in case
   // boolean operations
@@ -98,6 +96,12 @@ void methodtab_init()
   methodtab_add(stringtab("Bool"), stringtab("op_or"), &bool_or);
   methodtab_add(stringtab("Bool"), stringtab("op_xor"), &bool_xor);
   methodtab_add(stringtab("Bool"), stringtab("op_not"), &bool_not);
+
+  methodtab_add(stringtab("Pointer"), stringtab("create"), &pointer_create);
+  methodtab_add(stringtab("Pointer"), stringtab("_alloc"), &pointer_alloc);
+  methodtab_add(stringtab("Pointer"), stringtab("_realloc"), &pointer_realloc);
+  methodtab_add(stringtab("Pointer"), stringtab("_apply"), &pointer_apply);
+  methodtab_add(stringtab("Pointer"), stringtab("_update"), &pointer_update);
 }
 
 method_ptr_t methodtab_lookup(ast_t* receiver, ast_t* type,

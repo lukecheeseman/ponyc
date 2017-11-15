@@ -8,6 +8,7 @@
 #include "genopt.h"
 #include "gentype.h"
 #include "../expr/literal.h"
+#include "../evaluate/builtin/builtin_pointer.h"
 #include "../reach/subtype.h"
 #include "../type/cap.h"
 #include "../type/subtype.h"
@@ -579,9 +580,48 @@ LLVMValueRef gen_string(compile_t* c, ast_t* ast)
   return g_inst;
 }
 
+static LLVMValueRef gen_constant_pointer(compile_t* c, ast_t* ast)
+{
+  const char* obj_name = ast_name(ast_child(ast));
+  LLVMValueRef obj = LLVMGetNamedGlobal(c->module, obj_name);
+  if(obj != NULL)
+    return obj;
+
+  ast_t* type = ast_type(ast);
+  AST_GET_CHILDREN(type, package, id, typeargs);
+
+  reach_type_t* t = reach_type(c->reach, type);
+  compile_type_t* c_t = (compile_type_t*)t->c_type;
+
+  reach_type_t* elem_t = reach_type(c->reach, ast_child(typeargs));
+  compile_type_t* elem_c_t = (compile_type_t*)elem_t->c_type;
+
+  pointer_t* ptr = ast_data(ast);
+  pony_assert(ptr != NULL);
+  size_t ptr_size = ptr_get_size(ptr);
+
+  ast_t** ptr_elements = ptr_get_elements(ptr);
+  LLVMValueRef elements[ptr_size];
+
+  // Trim off the unnecessary elements
+  uint32_t i = 0;
+  for(; i < ptr_size && ptr_elements[i] != NULL; ++i)
+    elements[i] = gen_expr(c, ptr_elements[i]);
+
+  LLVMValueRef array = LLVMConstArray(elem_c_t->use_type, elements, i);
+  LLVMValueRef g_inst = LLVMAddGlobal(c->module, c_t->use_type, obj_name);
+  LLVMSetInitializer(g_inst, array);
+  LLVMSetGlobalConstant(g_inst, true);
+  LLVMSetLinkage(g_inst, LLVMInternalLinkage);
+  return g_inst;
+}
+
 LLVMValueRef gen_constant_object(compile_t* c, ast_t* ast)
 {
   ast_t* type = ast_type(ast);
+  if(is_pointer(type))
+    return gen_constant_pointer(c, ast);
+
   const char* object_name = ast_name(ast_child(ast));
   LLVMValueRef object = LLVMGetNamedGlobal(c->module, object_name);
   if(object != NULL)

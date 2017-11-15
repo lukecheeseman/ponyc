@@ -4,7 +4,7 @@
 #include "../../ast/ast.h"
 #include "../../pass/pass.h"
 
-typedef bool (*method_ptr_t)(pass_opt_t* opt, ast_t*, ast_t*, ast_t**);
+typedef bool (*method_ptr_t)(pass_opt_t* opt, ast_t*, ast_t**, ast_t**);
 
 typedef struct method_entry_t
 {

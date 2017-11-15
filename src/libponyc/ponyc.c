@@ -6,8 +6,6 @@
 
 bool ponyc_init(pass_opt_t* options)
 {
-  evaluate_init(options);
-
   if(!codegen_llvm_init())
     return false;
 
@@ -16,6 +14,8 @@ bool ponyc_init(pass_opt_t* options)
 
   if(!package_init(options))
     return false;
+
+  evaluate_init(options);
 
   return true;
 }

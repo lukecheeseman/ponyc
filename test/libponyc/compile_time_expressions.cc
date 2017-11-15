@@ -203,3 +203,16 @@ TEST_F(CompileTimeExpressionTest, CompileTimeCompileTimeObjectNoAlias)
 
   TEST_COMPILE(src);
 }
+
+/*
+TEST_F(CompileTimeExpressionTest, CompileTimeNonBuiltinIntConstructor)
+{
+  const char* src =
+    "actor Main\n"
+    "  new create(env: Env) =>\n"
+    "    let x = # (U32(2).max_value() - 1)";
+
+  set_builtin(NULL);
+  TEST_COMPILE(src);
+}
+*/

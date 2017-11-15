@@ -156,11 +156,7 @@ bool symtab_set_value(symtab_t* symtab, const char* name, ast_t* value)
   if(s == NULL)
     return false;
 
-  // Make a copy of the value, the value may not live anywhere else in the ast
-  // and is subject to being freed (e.g. when replacing an expression with
-  // constant object).
-  // TODO: memory leak?
-  s->value = ast_dup(value);
+  s->value = value;
   return true;
 }
 

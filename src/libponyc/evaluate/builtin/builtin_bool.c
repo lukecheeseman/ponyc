@@ -11,22 +11,21 @@ static bool bool_check_operand(ast_t* ast)
   return is_bool;
 }
 
-bool bool_create(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result)
+bool bool_create(pass_opt_t* opt, ast_t* receiver, ast_t** args, ast_t** result)
 {
   (void) receiver;
   (void) opt;
-  *result = ast_dup(ast_child(args));
+  *result = ast_dup(args[0]);
   return bool_check_operand(*result);
 }
 
 typedef bool (*test_equality_t)(token_id, token_id);
 
 static bool bool_logical_op(pass_opt_t* opt,
-  ast_t* receiver, ast_t* args, ast_t** result, test_equality_t test)
+  ast_t* receiver, ast_t** args, ast_t** result, test_equality_t test)
 {
-  pony_assert(ast_id(args) == TK_POSITIONALARGS);
   ast_t* lhs_arg = receiver;
-  ast_t* rhs_arg = ast_child(args);
+  ast_t* rhs_arg = args[0]; 
   if(!bool_check_operand(lhs_arg) || !bool_check_operand(rhs_arg))
     return false;
 
@@ -58,32 +57,32 @@ static bool test_or(token_id lhs, token_id rhs)
   return lhs == TK_TRUE || rhs == TK_TRUE;
 }
 
-bool bool_eq(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result)
+bool bool_eq(pass_opt_t* opt, ast_t* receiver, ast_t** args, ast_t** result)
 {
   return bool_logical_op(opt, receiver, args, result, &test_eq);
 }
 
-bool bool_ne(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result)
+bool bool_ne(pass_opt_t* opt, ast_t* receiver, ast_t** args, ast_t** result)
 {
   return bool_logical_op(opt, receiver, args, result, &test_ne);
 }
 
-bool bool_and(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result)
+bool bool_and(pass_opt_t* opt, ast_t* receiver, ast_t** args, ast_t** result)
 {
   return bool_logical_op(opt, receiver, args, result, &test_and);
 }
 
-bool bool_or(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result)
+bool bool_or(pass_opt_t* opt, ast_t* receiver, ast_t** args, ast_t** result)
 {
   return bool_logical_op(opt, receiver, args, result, &test_or);
 }
 
-bool bool_xor(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result)
+bool bool_xor(pass_opt_t* opt, ast_t* receiver, ast_t** args, ast_t** result)
 {
   return bool_logical_op(opt, receiver, args, result, &test_ne);
 }
 
-bool bool_not(pass_opt_t* opt, ast_t* receiver, ast_t* args, ast_t** result)
+bool bool_not(pass_opt_t* opt, ast_t* receiver, ast_t** args, ast_t** result)
 {
   (void) opt;
   (void) args;

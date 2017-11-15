@@ -3,11 +3,13 @@
 #include "../ast/astbuild.h"
 #include "../ast/lexer.h"
 #include "../ast/printbuf.h"
+#include "../codegen/codegen.h"
 #include "../expr/literal.h"
 #include "../type/alias.h"
 #include "../type/assemble.h"
 #include "../type/lookup.h"
 #include "../type/reify.h"
+#include "../type/subtype.h"
 #include "../pass/expr.h"
 #include "../pkg/package.h"
 #include "ponyassert.h"
@@ -18,10 +20,6 @@ void evaluate_init(pass_opt_t* opt)
     methodtab_init();
 }
 
-// TODO: perhaps we should introduce a new constant type that wraps a normal
-// type that allows/prohibits certain operations. For example, this would mean
-// an object can be mutated within the compile-time expression that it has been
-// define but prevented afterwards.
 bool expr_constant(pass_opt_t* opt, ast_t* ast)
 {
   pony_assert(ast_id(ast) == TK_CONSTANT);
@@ -148,6 +146,52 @@ static const char* object_hygienic_name(pass_opt_t* opt, ast_t* type)
   return r;
 }
 
+bool construct_object(pass_opt_t* opt, ast_t* from, ast_t** result)
+{
+  pony_assert(from != NULL);
+  ast_t* type = ast_type(from);
+  pony_assert(ast_id(type) == TK_NOMINAL);
+  const char* type_name = ast_name(ast_childidx(type, 1));
+  const char* object_name = object_hygienic_name(opt, type);
+
+  ast_t* class_def = ast_get(from, type_name, NULL);
+  pony_assert(class_def != NULL);
+
+  if(ast_id(class_def) == TK_ACTOR)
+  {
+    ast_error(opt->check.errors, from,
+              "cannot construct compile-time actors");
+    return false;
+  }
+
+  BUILD_NO_DECL(*result, from,
+    NODE(TK_CONSTANT_OBJECT, AST_SCOPE ID(object_name)))
+  ast_settype(*result, ast_dup(type));
+
+  ast_t* members = ast_childidx(class_def, 4);
+  ast_t* member = ast_child(members);
+  while(member != NULL)
+  {
+    token_id member_id = ast_id(member);
+    // Store all the fields that appear in this object, their values can be
+    // found in the symbol table.
+    if(member_id == TK_FVAR || member_id == TK_FLET || member_id == TK_EMBED)
+    {
+      sym_status_t s;
+      ast_t* member_ast = ast_get(class_def, ast_name(ast_child(member)), &s);
+      pony_assert(member_ast != NULL);
+
+      pony_assert(ast_set(*result, ast_name(ast_child(member)), member_ast, s,
+                  false));
+      ast_append(*result, member);
+    }
+
+    member = ast_sibling(member);
+  }
+
+  return true;
+}
+
 static bool evaluate_method(pass_opt_t* opt, ast_t* this, ast_t* expression,
   ast_t** result)
 {
@@ -156,19 +200,6 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* this, ast_t* expression,
 
   // Named arguments have already been converted to positional
   pony_assert(ast_id(named) == TK_NONE);
-
-  // Build up the evaluated arguments
-  ast_t* evaluated_args = ast_from(positional, ast_id(positional));
-  ast_t* argument = ast_child(positional);
-  while(argument != NULL)
-  {
-    ast_t* evaluated_arg;
-    if(!evaluate(opt, this, argument, &evaluated_arg))
-      return false;
-
-    ast_append(evaluated_args, evaluated_arg);
-    argument = ast_sibling(argument);
-  }
 
   // Check if this is a parametric function type and if so keep hold
   // of the typeargs for later.
@@ -190,12 +221,6 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* this, ast_t* expression,
   if((ast_id(receiver_type) == TK_ARROW) &&
     (ast_id(ast_child(receiver_type)) == TK_THISTYPE))
     receiver_type = ast_childidx(receiver_type, 1);
-
-  // First lookup to see if we have a builtin method to evaluate the expression
-  method_ptr_t builtin_method
-    = methodtab_lookup(evaluated_receiver, receiver_type, ast_name(method_id));
-  if(builtin_method != NULL)
-    return builtin_method(opt, evaluated_receiver, evaluated_args, result);
 
   // We cannot evaluate compile-time behaviours, we shouldn't get here as we
   // cannot construct compile-time actors.
@@ -231,65 +256,48 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* this, ast_t* expression,
   }
 
   // Evaluate all the arguments and assign them to the repsective paramter
-  // names
+  // names, we also build up an array of the arguments in case we're going to
+  // call a builtin.
   ast_t* parameters = ast_childidx(method, 3);
   ast_t* parameter = ast_child(parameters);
-  ast_t* evaluated_arg = ast_child(evaluated_args);
-  while(evaluated_arg != NULL)
+  ast_t* argument = ast_child(positional);
+  ast_t* evaluated_args[ast_childcount(parameters)];
+  size_t i = 0;
+  while(argument != NULL && parameter != NULL)
   {
-    assign_value(opt, this, parameter, evaluated_arg, NULL);
-    evaluated_arg = ast_sibling(evaluated_arg);
+    ast_t* evaluated_arg;
+    if(!evaluate(opt, this, argument, &evaluated_arg))
+      return false;
+
+    evaluated_args[i++] = evaluated_arg;
+    assign_value(opt, method, parameter, evaluated_arg, NULL);
     parameter = ast_sibling(parameter);
+    argument = ast_sibling(argument);
   }
+  pony_assert(argument == NULL && parameter == NULL);
+
+  // First lookup to see if we have a builtin method to evaluate the expression
+  method_ptr_t builtin_method
+    = methodtab_lookup(evaluated_receiver, receiver_type, ast_name(method_id));
+  if(builtin_method != NULL)
+    return builtin_method(opt, evaluated_receiver, evaluated_args, result);
 
   // Now in a position to evaluate the body
   ast_t* method_body = ast_childidx(method, 6);
 
-  if(ast_id(method) != TK_NEW)
+  // If this is a method execute the body. If the receiver is an integer/bool
+  // type then, even if this is a constructor, just execute the body as we don't
+  // want to construcut any object in this case (there would be nothing to put
+  // in it - so we just use the raw values).
+  if(ast_id(method) != TK_NEW ||
+     is_integer(receiver_type) || is_bool(receiver_type))
     return evaluate(opt, evaluated_receiver, method_body, result);
 
   // If the method is a constructor then we need to build a compile time object
   // adding the values of the fields as the children and setting the type
   // to be the return type of the function body
-  const char* type_name = ast_name(ast_childidx(receiver_type, 1));
-  const char* object_name = object_hygienic_name(opt, receiver_type);
-
-  ast_t* class_def = ast_get(postfix, type_name, NULL);
-  pony_assert(class_def != NULL);
-
-  if(ast_id(class_def) == TK_ACTOR)
-  {
-    ast_error(opt->check.errors, method,
-              "cannot construct compile-time actors");
+  if(!construct_object(opt, receiver, result))
     return false;
-  }
-
-  ast_t* return_type = ast_childidx(ast_type(postfix), 3);
-
-  BUILD_NO_DECL(*result, postfix,
-    NODE(TK_CONSTANT_OBJECT, AST_SCOPE ID(object_name)))
-  ast_settype(*result, ast_dup(return_type));
-
-  ast_t* members = ast_childidx(class_def, 4);
-  ast_t* member = ast_child(members);
-  while(member != NULL)
-  {
-    token_id member_id = ast_id(member);
-    // Store all the fields that appear in this object, their values can be
-    // found in the symbol table.
-    if(member_id == TK_FVAR || member_id == TK_FLET || member_id == TK_EMBED)
-    {
-      sym_status_t s;
-      ast_t* member_ast = ast_get(method, ast_name(ast_child(member)), &s);
-      pony_assert(member_ast != NULL);
-
-      pony_assert(ast_set(*result, ast_name(ast_child(member)), member_ast, s,
-                  false));
-      ast_append(*result, member);
-    }
-
-    member = ast_sibling(member);
-  }
 
   // Now run the constructor to initialise the fields etc.
   this = *result;
@@ -300,8 +308,6 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* this, ast_t* expression,
   return true;
 }
 
-// TODO: we will need to carry around information about what _this_ is so that
-// we can evaluate methods and field lookups
 static bool evaluate(pass_opt_t* opt, ast_t* this, ast_t* expression,
   ast_t** result)
 {
@@ -320,19 +326,19 @@ static bool evaluate(pass_opt_t* opt, ast_t* this, ast_t* expression,
     case TK_INT:
     case TK_FLOAT:
     case TK_ERROR:
-      *result = expression;
+      *result = ast_dup(expression);
       return true;
 
     case TK_TYPEREF:
       *result = expression;
       return true;
 
+    // FIXME:
     // String literals are a bit special; we want to construct an object with
     // all of the fields.
     case TK_STRING:
     {
       pony_assert(0);
-
     }
 
    // FVARREF may seem unintuitive to add but in fact it's safe due to the deep
