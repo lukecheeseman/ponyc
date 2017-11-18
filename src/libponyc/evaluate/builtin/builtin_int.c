@@ -335,35 +335,19 @@ bool int_usize(pass_opt_t* opt, ast_t* receiver, ast_t** args, ast_t** result)
   return int_cast_to_type(opt, receiver, result, "USize");
 }
 
+#include "../../codegen/codegen.h"
+#include "../../codegen/gentype.h"
+
 // FIXME: this should use the target data size
 static size_t sizeof_type(pass_opt_t* opt, ast_t* type)
 {
-  (void) opt;
-  /*
+  pony_assert(is_integer(type));
   compile_t c;
   memset(&c, 0, sizeof(compile_t));
-  c.opt = opt;
-  c.context = LLVMContextCreate();
+  codegen_init_target_information(&c, opt, "Tim the bear", false);
   codegen_init_datatypes(&c);
-  LLVMTypeRef target_type = codegen_get_integer_type(ast_name(ast_childidx(type, 1)), &c);
-  (void) target_type;
-  */
-  pony_assert(is_integer(type));
-  if(is_literal(type, "I8") || is_literal(type, "U8"))
-    return 1;
-  else if(is_literal(type, "I16") || is_literal(type, "U16"))
-    return 2;
-  else if(is_literal(type, "I32") || is_literal(type, "U32"))
-    return 4;
-  else if(is_literal(type, "I64") || is_literal(type, "U64"))
-    return 8;
-  else if(is_literal(type, "I128") || is_literal(type, "U128"))
-    return 16;
-  else if(is_literal(type, "ILong") || is_literal(type, "ULong"))
-    return 8;
-  else if(is_literal(type, "ISize") || is_literal(type, "USize"))
-    return 8;
-  return 0;
+  LLVMTypeRef target_type = codegen_get_primitive_type(&c, ast_name(ast_childidx(type, 1)));
+  return LLVMABISizeOfType(c.target_data, target_type);
 }
 
 bool int_clz(pass_opt_t* opt, ast_t* receiver, ast_t** args, ast_t** result)

@@ -196,6 +196,66 @@ static void allocate_compile_types(compile_t* c)
   }
 }
 
+LLVMTypeRef codegen_get_primitive_type(compile_t* c, const char* prim_name)
+{
+  char* triple = c->opt->triple;
+  bool ilp32 = target_is_ilp32(triple);
+  bool llp64 = target_is_llp64(triple);
+  bool lp64 = target_is_lp64(triple);
+
+  if(prim_name == c->str_I8)
+    return c->i8;
+  else if(prim_name == c->str_U8)
+    return c->i8;
+  else if(prim_name == c->str_I16)
+    return c->i16;
+  else if(prim_name == c->str_U16)
+    return c->i16;
+  else if(prim_name == c->str_I32)
+    return c->i32;
+  else if(prim_name == c->str_U32)
+    return c->i32;
+  else if(prim_name == c->str_I64)
+    return c->i64;
+  else if(prim_name == c->str_U64)
+    return c->i64;
+  else if(prim_name == c->str_I128)
+    return c->i128;
+  else if(prim_name == c->str_U128)
+    return c->i128;
+  else if(ilp32 && prim_name == c->str_ILong)
+    return c->i32;
+  else if(ilp32 && prim_name == c->str_ULong)
+    return c->i32;
+  else if(ilp32 && prim_name == c->str_ISize)
+    return c->i32;
+  else if(ilp32 && prim_name == c->str_USize)
+    return c->i32;
+  else if(lp64 && prim_name == c->str_ILong)
+    return c->i64;
+  else if(lp64 && prim_name == c->str_ULong)
+    return c->i64;
+  else if(lp64 && prim_name == c->str_ISize)
+    return c->i64;
+  else if(lp64 && prim_name == c->str_USize)
+    return c->i64;
+  else if(llp64 && prim_name == c->str_ILong)
+    return c->i32;
+  else if(llp64 && prim_name == c->str_ULong)
+    return c->i32;
+  else if(llp64 && prim_name == c->str_ISize)
+    return c->i64;
+  else if(llp64 && prim_name == c->str_USize)
+    return c->i64;
+  else if(prim_name == c->str_F32)
+    return c->f32;
+  else if(prim_name == c->str_F64)
+    return c->f64;
+  else if(prim_name == c->str_Bool)
+    return c->i1;
+  return NULL;
+}
+
 static bool make_opaque_struct(compile_t* c, reach_type_t* t)
 {
   compile_type_t* c_t = (compile_type_t*)t->c_type;
@@ -222,62 +282,15 @@ static bool make_opaque_struct(compile_t* c, reach_type_t* t)
 
       char* triple = c->opt->triple;
       bool ilp32 = target_is_ilp32(triple);
-      bool llp64 = target_is_llp64(triple);
-      bool lp64 = target_is_lp64(triple);
 
       if(package == c->str_builtin)
       {
-        if(name == c->str_I8)
-          c_t->primitive = c->i8;
-        else if(name == c->str_U8)
-          c_t->primitive = c->i8;
-        else if(name == c->str_I16)
-          c_t->primitive = c->i16;
-        else if(name == c->str_U16)
-          c_t->primitive = c->i16;
-        else if(name == c->str_I32)
-          c_t->primitive = c->i32;
-        else if(name == c->str_U32)
-          c_t->primitive = c->i32;
-        else if(name == c->str_I64)
-          c_t->primitive = c->i64;
-        else if(name == c->str_U64)
-          c_t->primitive = c->i64;
-        else if(name == c->str_I128)
-          c_t->primitive = c->i128;
-        else if(name == c->str_U128)
-          c_t->primitive = c->i128;
-        else if(ilp32 && name == c->str_ILong)
-          c_t->primitive = c->i32;
-        else if(ilp32 && name == c->str_ULong)
-          c_t->primitive = c->i32;
-        else if(ilp32 && name == c->str_ISize)
-          c_t->primitive = c->i32;
-        else if(ilp32 && name == c->str_USize)
-          c_t->primitive = c->i32;
-        else if(lp64 && name == c->str_ILong)
-          c_t->primitive = c->i64;
-        else if(lp64 && name == c->str_ULong)
-          c_t->primitive = c->i64;
-        else if(lp64 && name == c->str_ISize)
-          c_t->primitive = c->i64;
-        else if(lp64 && name == c->str_USize)
-          c_t->primitive = c->i64;
-        else if(llp64 && name == c->str_ILong)
-          c_t->primitive = c->i32;
-        else if(llp64 && name == c->str_ULong)
-          c_t->primitive = c->i32;
-        else if(llp64 && name == c->str_ISize)
-          c_t->primitive = c->i64;
-        else if(llp64 && name == c->str_USize)
-          c_t->primitive = c->i64;
-        else if(name == c->str_F32)
-          c_t->primitive = c->f32;
-        else if(name == c->str_F64)
-          c_t->primitive = c->f64;
-        else if(name == c->str_Bool)
+        LLVMTypeRef primitive_type = codegen_get_primitive_type(c, name);
+        if(primitive_type != NULL)
+          c_t->primitive = primitive_type;
+
+        if(name == c->str_Bool)
         {
-          c_t->primitive = c->i1;
           c_t->use_type = c->i1;
 
           // The memory representation of Bool is 32 bits wide on Darwin PPC32,

@@ -293,6 +293,11 @@ LLVMValueRef codegen_string(compile_t* c, const char* str, size_t len);
 const char* suffix_filename(compile_t* c, const char* dir, const char* prefix,
   const char* file, const char* extension);
 
+bool codegen_init_target_information(compile_t* c, pass_opt_t* opt,
+                                     const char* module_name, bool jit);
+
+void codegen_init_datatypes(compile_t* c);
+
 PONY_EXTERN_C_END
 
 #endif

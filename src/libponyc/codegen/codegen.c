@@ -99,7 +99,7 @@ static LLVMTargetMachineRef make_machine(pass_opt_t* opt, bool jit)
   return machine;
 }
 
-static void init_runtime(compile_t* c)
+void codegen_init_datatypes(compile_t* c)
 {
   c->str_builtin = stringtab("$0");
   c->str_Bool = stringtab("Bool");
@@ -127,6 +127,29 @@ static void init_runtime(compile_t* c)
   c->str_Platform = stringtab("Platform");
   c->str_Main = stringtab("Main");
   c->str_Env = stringtab("Env");
+
+  c->void_type = LLVMVoidTypeInContext(c->context);
+  c->i1 = LLVMInt1TypeInContext(c->context);
+  c->i8 = LLVMInt8TypeInContext(c->context);
+  c->i16 = LLVMInt16TypeInContext(c->context);
+  c->i32 = LLVMInt32TypeInContext(c->context);
+  c->i64 = LLVMInt64TypeInContext(c->context);
+  c->i128 = LLVMIntTypeInContext(c->context, 128);
+  c->f32 = LLVMFloatTypeInContext(c->context);
+  c->f64 = LLVMDoubleTypeInContext(c->context);
+  c->intptr = LLVMIntPtrTypeInContext(c->context, c->target_data);
+
+  // i8*
+  c->void_ptr = LLVMPointerType(c->i8, 0);
+
+  // forward declare object
+  c->object_type = LLVMStructCreateNamed(c->context, "__object");
+  c->object_ptr = LLVMPointerType(c->object_type, 0);
+}
+
+static void init_runtime(compile_t* c)
+{
+  codegen_init_datatypes(c);
 
   c->str_add = stringtab("add");
   c->str_sub = stringtab("sub");
@@ -174,24 +197,6 @@ static void init_runtime(compile_t* c)
   LLVMTypeRef type;
   LLVMTypeRef params[5];
   LLVMValueRef value;
-
-  c->void_type = LLVMVoidTypeInContext(c->context);
-  c->i1 = LLVMInt1TypeInContext(c->context);
-  c->i8 = LLVMInt8TypeInContext(c->context);
-  c->i16 = LLVMInt16TypeInContext(c->context);
-  c->i32 = LLVMInt32TypeInContext(c->context);
-  c->i64 = LLVMInt64TypeInContext(c->context);
-  c->i128 = LLVMIntTypeInContext(c->context, 128);
-  c->f32 = LLVMFloatTypeInContext(c->context);
-  c->f64 = LLVMDoubleTypeInContext(c->context);
-  c->intptr = LLVMIntPtrTypeInContext(c->context, c->target_data);
-
-  // i8*
-  c->void_ptr = LLVMPointerType(c->i8, 0);
-
-  // forward declare object
-  c->object_type = LLVMStructCreateNamed(c->context, "__object");
-  c->object_ptr = LLVMPointerType(c->object_type, 0);
 
   // padding required in an actor between the descriptor and fields
   c->actor_pad = LLVMArrayType(c->i8, PONY_ACTOR_PAD_SIZE);
@@ -626,20 +631,11 @@ static void init_runtime(compile_t* c)
   value = LLVMAddFunction(c->module, "puts", type);
 }
 
-static bool init_module(compile_t* c, ast_t* program, pass_opt_t* opt, bool jit)
+bool codegen_init_target_information(compile_t* c, pass_opt_t* opt,
+                                     const char* module_name,
+                                     bool jit)
 {
   c->opt = opt;
-
-  // Get the first package and the builtin package.
-  ast_t* package = ast_child(program);
-  ast_t* builtin = ast_sibling(package);
-
-  // If we have only one package, we are compiling builtin itself.
-  if(builtin == NULL)
-    builtin = package;
-
-  // The name of the first package is the name of the program.
-  c->filename = package_filename(package);
 
   // LLVM context and machine settings.
   if(c->opt->library || target_is_ilp32(opt->triple))
@@ -660,7 +656,7 @@ static bool init_module(compile_t* c, ast_t* program, pass_opt_t* opt, bool jit)
   c->context = LLVMContextCreate();
 
   // Create a module.
-  c->module = LLVMModuleCreateWithNameInContext(c->filename, c->context);
+  c->module = LLVMModuleCreateWithNameInContext(module_name, c->context);
 
   // Set the target triple.
   LLVMSetTarget(c->module, opt->triple);
@@ -670,6 +666,25 @@ static bool init_module(compile_t* c, ast_t* program, pass_opt_t* opt, bool jit)
   char* layout = LLVMCopyStringRepOfTargetData(c->target_data);
   LLVMSetDataLayout(c->module, layout);
   LLVMDisposeMessage(layout);
+
+  return true;
+}
+
+static bool init_module(compile_t* c, ast_t* program, pass_opt_t* opt, bool jit)
+{
+  // Get the first package and the builtin package.
+  ast_t* package = ast_child(program);
+  ast_t* builtin = ast_sibling(package);
+
+  // If we have only one package, we are compiling builtin itself.
+  if(builtin == NULL)
+    builtin = package;
+
+  // The name of the first package is the name of the program.
+  c->filename = package_filename(package);
+
+  if(!codegen_init_target_information(c, opt, c->filename, jit))
+    return false;
 
   // IR builder.
   c->builder = LLVMCreateBuilderInContext(c->context);
