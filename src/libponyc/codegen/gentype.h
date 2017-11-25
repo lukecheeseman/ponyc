@@ -22,6 +22,8 @@ LLVMValueRef tbaa_metadata_for_type(compile_t* c, ast_t* type);
 
 LLVMValueRef tbaa_metadata_for_box_type(compile_t* c, const char* box_name);
 
+void tbaa_tag(compile_t* c, LLVMValueRef metadata, LLVMValueRef instr);
+
 void get_fieldinfo(ast_t* l_type, ast_t* right, ast_t** l_def,
   ast_t** field, uint32_t* index);
 
