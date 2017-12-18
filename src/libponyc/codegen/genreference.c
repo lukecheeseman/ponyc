@@ -598,7 +598,7 @@ static LLVMValueRef gen_constant_pointer(compile_t* c, ast_t* ast)
 
   pointer_t* ptr = ast_data(ast);
   pony_assert(ptr != NULL);
-  size_t ptr_size = ptr_get_size(ptr);
+  size_t ptr_size = (size_t)ptr_get_size(ptr);
 
   ast_t** ptr_elements = ptr_get_elements(ptr);
   LLVMValueRef elements[ptr_size];

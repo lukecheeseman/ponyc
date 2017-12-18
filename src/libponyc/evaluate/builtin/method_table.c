@@ -35,7 +35,7 @@ DEFINE_HASHMAP(method_table, method_table_t, method_entry_t, method_hash,
 
 static method_table_t method_table;
 
-static void methodtab_add(const char* name, const char* type, method_ptr_t method)
+void methodtab_add(const char* name, const char* type, method_ptr_t method)
 {
   method_entry_t m = {name, type, method};
   method_table_put(&method_table, method_dup(&m));
@@ -45,63 +45,10 @@ static void methodtab_add(const char* name, const char* type, method_ptr_t metho
 // Builds the method lookup table for the supported builting operations
 void methodtab_init()
 {
-  // TODO: rename to real?
-  // integer operations
   method_table_init(&method_table, 20);
-  methodtab_add(stringtab("integer"), stringtab("create"), &int_create);
-
-  methodtab_add(stringtab("integer"), stringtab("add"), &int_add);
-  methodtab_add(stringtab("integer"), stringtab("sub"), &int_sub);
-  methodtab_add(stringtab("integer"), stringtab("mul"), &int_mul);
-  methodtab_add(stringtab("integer"), stringtab("div"), &int_div);
-
-  methodtab_add(stringtab("integer"), stringtab("neg"), &int_neg);
-  methodtab_add(stringtab("integer"), stringtab("eq"), &int_eq);
-  methodtab_add(stringtab("integer"), stringtab("ne"), &int_ne);
-  methodtab_add(stringtab("integer"), stringtab("lt"), &int_lt);
-  methodtab_add(stringtab("integer"), stringtab("le"), &int_le);
-  methodtab_add(stringtab("integer"), stringtab("gt"), &int_gt);
-  methodtab_add(stringtab("integer"), stringtab("ge"), &int_ge);
-
-  methodtab_add(stringtab("integer"), stringtab("op_and"), &int_and);
-  methodtab_add(stringtab("integer"), stringtab("op_or"), &int_or);
-  methodtab_add(stringtab("integer"), stringtab("op_xor"), &int_xor);
-  methodtab_add(stringtab("integer"), stringtab("op_not"), &int_not);
-  methodtab_add(stringtab("integer"), stringtab("shl"), &int_shl);
-  methodtab_add(stringtab("integer"), stringtab("shr"), &int_shr);
-
-  // integer casting methods
-  methodtab_add(stringtab("integer"), stringtab("i8"), &int_i8);
-  methodtab_add(stringtab("integer"), stringtab("i16"), &int_i16);
-  methodtab_add(stringtab("integer"), stringtab("i32"), &int_i32);
-  methodtab_add(stringtab("integer"), stringtab("i64"), &int_i64);
-  methodtab_add(stringtab("integer"), stringtab("i128"), &int_i128);
-  methodtab_add(stringtab("integer"), stringtab("ilong"), &int_ilong);
-  methodtab_add(stringtab("integer"), stringtab("isize"), &int_isize);
-  methodtab_add(stringtab("integer"), stringtab("u8"), &int_u8);
-  methodtab_add(stringtab("integer"), stringtab("u16"), &int_u16);
-  methodtab_add(stringtab("integer"), stringtab("u32"), &int_u32);
-  methodtab_add(stringtab("integer"), stringtab("u64"), &int_u64);
-  methodtab_add(stringtab("integer"), stringtab("u128"), &int_u128);
-  methodtab_add(stringtab("integer"), stringtab("ulong"), &int_ulong);
-  methodtab_add(stringtab("integer"), stringtab("usize"), &int_usize);
-
-  methodtab_add(stringtab("integer"), stringtab("clz"), &int_clz);
-
-  //TODO: make the type names consistent in case
-  // boolean operations
-  methodtab_add(stringtab("Bool"), stringtab("eq"), &bool_eq);
-  methodtab_add(stringtab("Bool"), stringtab("ne"), &bool_ne);
-  methodtab_add(stringtab("Bool"), stringtab("op_and"), &bool_and);
-  methodtab_add(stringtab("Bool"), stringtab("op_or"), &bool_or);
-  methodtab_add(stringtab("Bool"), stringtab("op_xor"), &bool_xor);
-  methodtab_add(stringtab("Bool"), stringtab("op_not"), &bool_not);
-
-  methodtab_add(stringtab("Pointer"), stringtab("create"), &pointer_create);
-  methodtab_add(stringtab("Pointer"), stringtab("_alloc"), &pointer_alloc);
-  methodtab_add(stringtab("Pointer"), stringtab("_realloc"), &pointer_realloc);
-  methodtab_add(stringtab("Pointer"), stringtab("_apply"), &pointer_apply);
-  methodtab_add(stringtab("Pointer"), stringtab("_update"), &pointer_update);
+  builtin_int_add_methods();
+  builtin_bool_add_methods();
+  builtin_pointer_add_methods();
 }
 
 method_ptr_t methodtab_lookup(ast_t* receiver, ast_t* type,

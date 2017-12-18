@@ -17,6 +17,8 @@ DECLARE_HASHMAP(method_table, method_table_t, method_entry_t);
 
 void methodtab_init();
 
+void methodtab_add(const char* name, const char* type, method_ptr_t method);
+
 method_ptr_t methodtab_lookup(ast_t* receiver, ast_t* type,
   const char* operation);
 

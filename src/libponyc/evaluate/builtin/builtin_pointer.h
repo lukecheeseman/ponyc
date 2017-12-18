@@ -4,22 +4,13 @@
 #include "../../ast/ast.h"
 #include "../../pass/pass.h"
 
+void builtin_pointer_add_methods();
+
 typedef struct pointer pointer_t;
 
 uint64_t ptr_get_size(pointer_t* ptr);
 
 ast_t** ptr_get_elements(pointer_t* ptr);
-
-bool pointer_create(pass_opt_t* opt, ast_t* receiver, ast_t** args,
-                    ast_t** result);
-bool pointer_alloc(pass_opt_t* opt, ast_t* receiver, ast_t** args,
-                   ast_t** result);
-bool pointer_realloc(pass_opt_t* opt, ast_t* receiver, ast_t** args,
-                     ast_t** result);
-bool pointer_apply(pass_opt_t* opt, ast_t* receiver, ast_t** args,
-                   ast_t** result);
-bool pointer_update(pass_opt_t* opt, ast_t* receiver, ast_t** args,
-                    ast_t** result);
 
 /*
   fun tag _unsafe(): Pointer[A] ref =>
