@@ -41,7 +41,6 @@ void methodtab_add(const char* name, const char* type, method_ptr_t method)
   method_table_put(&method_table, method_dup(&m));
 }
 
-// TODO: let builtins register their own methods
 // Builds the method lookup table for the supported builting operations
 void methodtab_init()
 {
@@ -49,6 +48,12 @@ void methodtab_init()
   builtin_int_add_methods();
   builtin_bool_add_methods();
   builtin_pointer_add_methods();
+}
+
+void methodtab_done()
+{
+  method_table_destroy(&method_table);
+  memset(&method_table, 0, sizeof(method_table_t));
 }
 
 method_ptr_t methodtab_lookup(ast_t* receiver, ast_t* type,

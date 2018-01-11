@@ -177,6 +177,66 @@ TEST_F(CompileTimeExpressionTest, CompileTimeCompileTimeObjectVarFieldReassign)
   TEST_COMPILE(src);
 }
 
+TEST_F(CompileTimeExpressionTest, ClassWithBoundLetField)
+{
+  const char* src =
+    "class C1\n"
+    "  let x: U32 = # 2\n"
+    "\n"
+    "actor Main\n"
+    "  new create(env: Env) => true";
+
+  TEST_COMPILE(src);
+}
+
+TEST_F(CompileTimeExpressionTest, ClassWithBoundLetFieldUsedInMethod)
+{
+  const char* src =
+    "class C1\n"
+    "  let x: U32 = # 2\n"
+    "\n"
+    "  fun apply(): U32 => # (x + 10)\n"
+    "\n"
+    "actor Main\n"
+    "  new create(env: Env) => true";
+
+  set_builtin(NULL);
+  TEST_COMPILE(src);
+}
+
+TEST_F(CompileTimeExpressionTest, ClassWithBoundLetFieldUsedInField)
+{
+  const char* src =
+    "class C1\n"
+    "  let x: U32 = # 10\n"
+    "  let y: U32 = # (x + 2)\n"
+    "\n"
+    "  fun apply(): U32 => # (y + 10)\n"
+    "\n"
+    "actor Main\n"
+    "  new create(env: Env) => true";
+
+  set_builtin(NULL);
+  TEST_COMPILE(src);
+}
+
+TEST_F(CompileTimeExpressionTest, ClassWithUnitiliasedLetFieldUsedInField)
+{
+  const char* src =
+    "class C1\n"
+    "  let x: U32\n"
+    "\n"
+    "  new create() => x = # 2\n"
+    "\n"
+    "  fun foo(): U32 => # (x + 10)\n"
+    "\n"
+    "actor Main\n"
+    "  new create(env: Env) => true";
+
+  set_builtin(NULL);
+  TEST_ERROR(src);
+}
+
 TEST_F(CompileTimeExpressionTest, CompileTimeCompileTimeResultIsVal)
 {
   const char* src =
@@ -205,6 +265,7 @@ TEST_F(CompileTimeExpressionTest, CompileTimeCompileTimeObjectNoAlias)
 }
 
 /*
+// FIXME: This test causes an infinite loop somewhere
 TEST_F(CompileTimeExpressionTest, CompileTimeNonBuiltinIntConstructor)
 {
   const char* src =

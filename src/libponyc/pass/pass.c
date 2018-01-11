@@ -276,8 +276,11 @@ static bool ast_passes(ast_t** astp, pass_opt_t* options, pass_id last)
   if(is_program)
     plugin_visit_ast(*astp, options, PASS_EXPR);
 
-  if(!visit_pass(astp, options, last, &r, PASS_EVALUATE, NULL, pass_evaluate))
+  if(!visit_pass(astp, options, last, &r, PASS_EVALUATE, pre_pass_evaluate, pass_evaluate))
     return r;
+
+  if(is_program)
+    plugin_visit_ast(*astp, options, PASS_EVALUATE);
 
   if(!visit_pass(astp, options, last, &r, PASS_VERIFY, NULL, pass_verify))
     return r;

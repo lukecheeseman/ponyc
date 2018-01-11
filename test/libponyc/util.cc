@@ -6,6 +6,7 @@
 #include <ast/lexer.h>
 #include <ast/source.h>
 #include <ast/stringtab.h>
+#include <evaluate/evaluate.h>
 #include <pass/pass.h>
 #include <pkg/package.h>
 #include <codegen/genjit.h>
@@ -228,6 +229,7 @@ void PassTest::SetUp()
   pass_opt_init(&opt);
   codegen_pass_init(&opt);
   package_init(&opt);
+  evaluate_init(&opt);
   program = NULL;
   package = NULL;
   module = NULL;
@@ -267,6 +269,7 @@ void PassTest::TearDown()
   package = NULL;
   module = NULL;
   last_pass = PASS_PARSE;
+  evaluate_done(&opt);
   package_done(&opt);
   codegen_pass_cleanup(&opt);
   pass_opt_done(&opt);

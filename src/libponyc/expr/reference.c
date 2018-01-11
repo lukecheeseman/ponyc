@@ -190,6 +190,11 @@ bool expr_field(pass_opt_t* opt, ast_t* ast)
   (void)opt;
   AST_GET_CHILDREN(ast, id, type, init);
   ast_settype(ast, type);
+  if(ast_id(init) != TK_NONE)
+  {
+    if(!coerce_literals(&init, type, opt))
+      return false;
+  }
   return true;
 }
 
@@ -719,7 +724,8 @@ bool expr_this(pass_opt_t* opt, ast_t* ast)
     return false;
   }
 
-  if(ast_id(ast_child(opt->check.frame->method)) == TK_AT)
+  if(opt->check.frame->method != NULL &&
+     ast_id(ast_child(opt->check.frame->method)) == TK_AT)
   {
     ast_error(opt->check.errors, ast,
       "can't reference 'this' in a bare method");

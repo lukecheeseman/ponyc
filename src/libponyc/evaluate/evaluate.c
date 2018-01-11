@@ -20,6 +20,12 @@ void evaluate_init(pass_opt_t* opt)
     methodtab_init();
 }
 
+void evaluate_done(pass_opt_t* opt)
+{
+  if(opt->limit >= PASS_EVALUATE)
+    methodtab_done();
+}
+
 bool expr_constant(pass_opt_t* opt, ast_t* ast)
 {
   pony_assert(ast_id(ast) == TK_CONSTANT);
@@ -60,7 +66,7 @@ static bool evaluate(pass_opt_t* opt, ast_t* this, ast_t* expression,
  * method assumes that all mappings are valid, the method is provided as a
  * convenience to extract the identifier name.
  */
-static void assign_value(pass_opt_t* opt, ast_t* this, ast_t* left,
+static bool assign_value(pass_opt_t* opt, ast_t* this, ast_t* left,
   ast_t* right, ast_t** result)
 {
   (void) opt;
@@ -72,31 +78,29 @@ static void assign_value(pass_opt_t* opt, ast_t* this, ast_t* left,
     case TK_VAR:
     case TK_VARREF:
     case TK_LET:
+    case TK_FLET:
     case TK_PARAM:
-      pony_assert(ast_setvalue(left, ast_name(ast_child(left)), right, result));
-      return;
+      return ast_setvalue(left, ast_name(ast_child(left)), right, result);
 
     case TK_FLETREF:
     case TK_FVARREF:
     {
-      // assign value should return some bool
       AST_GET_CHILDREN(left, receiver, id);
 
       ast_t* evaluated_receiver;
       evaluate(opt, this, receiver, &evaluated_receiver);
       pony_assert(evaluated_receiver != NULL);
 
-      pony_assert(ast_setvalue(evaluated_receiver, ast_name(id), right, result));
-      return;
+      return ast_setvalue(evaluated_receiver, ast_name(id), right, result);
     }
 
     default:
       pony_assert(0);
+      return false;
   }
 }
 
 // Bind a value so that it can be used in later compile-time expressions
-// FIXME: We should also be able bind a let field
 static bool bind_value(pass_opt_t* opt, ast_t* left, ast_t* right,
   ast_t** result)
 {
@@ -105,11 +109,11 @@ static bool bind_value(pass_opt_t* opt, ast_t* left, ast_t* right,
   pony_assert(right != NULL);
 
   token_id left_id = ast_id(left);
-  if(left_id == TK_VAR || left_id == TK_VARREF)
+  if(left_id == TK_VAR || left_id == TK_VARREF ||
+     left_id == TK_FVAR || left_id == TK_FVARREF)
     return false;
 
-  assign_value(opt, NULL, left, right, result);
-  return true;
+  return assign_value(opt, NULL, left, right, result);
 }
 
 static void construct_object_hygienic_name(printbuf_t* buf, pass_opt_t* opt,
@@ -523,6 +527,31 @@ ast_result_t pass_evaluate(ast_t** astp, pass_opt_t* options)
     if(ast_id(ast_parent(ast)) == TK_ASSIGN)
       bind_value(options, ast_previous(ast), result, NULL);
     ast_replace(astp, result);
+  }
+
+  return AST_OK;
+}
+
+ast_result_t pre_pass_evaluate(ast_t** astp, pass_opt_t* options)
+{
+  (void) options;
+  ast_t* ast = *astp;
+
+  if(ast_id(ast) == TK_FLET)
+  {
+    AST_GET_CHILDREN(ast, f_id, f_type, f_init);
+    if(ast_id(f_init) != TK_CONSTANT)
+      return AST_OK;
+
+    ast_t* result;
+    if(!evaluate(options, NULL, f_init, &result))
+    {
+      pony_assert(errors_get_count(options->check.errors) > 0);
+      return AST_ERROR;
+    }
+
+    pony_assert(bind_value(options, ast, result, NULL));
+    ast_swap(f_init, ast_from(f_init, TK_NONE));
   }
 
   return AST_OK;

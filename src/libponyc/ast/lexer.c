@@ -305,6 +305,7 @@ static const lextoken_t abstract[] =
 
   { "annotation", TK_ANNOTATION },
 
+  { "constant", TK_CONSTANT },
   { "constant_object", TK_CONSTANT_OBJECT },
 
   { "\\n", TK_NEWLINE },

@@ -205,7 +205,10 @@ static ast_result_t sugar_entity(pass_opt_t* opt, ast_t* ast, bool add_create,
         if(ast_id(f_init) != TK_NONE)
         {
           // Replace the initialiser with TK_NONE.
-          ast_swap(f_init, ast_from(f_init, TK_NONE));
+          if(ast_id(f_init) != TK_CONSTANT)
+            // Leave the initialiser here for compile-time lets so that we can
+            // bind the value later
+            ast_swap(f_init, ast_from(f_init, TK_NONE));
 
           // id = init
           BUILD(init, member,
