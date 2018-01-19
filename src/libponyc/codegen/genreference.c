@@ -631,28 +631,33 @@ LLVMValueRef gen_constant_object(compile_t* c, ast_t* ast)
   reach_type_t* t = reach_type(c->reach, type);
   pony_assert(t != NULL);
 
-  uint32_t field_count = t->field_count;
-  if (ast_id(type) != TK_TUPLETYPE)
-    field_count++; // For the description
+  uint32_t field_count = t->field_count + 1;
   LLVMValueRef args[field_count];
 
   compile_type_t* c_t = (compile_type_t*)t->c_type;
 
-  uint32_t arg = 0;
-  if (ast_id(type) != TK_TUPLETYPE)
-    args[arg++] = c_t->desc;
-
+  uint32_t field = 0;
+  args[field++] = c_t->desc;
   for(ast_t* member = ast_childidx(ast, 1);
       member != NULL;
-      arg++, member = ast_sibling(member))
+      field++, member = ast_sibling(member))
   {
       ast_t* member_value = ast_getvalue(ast, ast_name(ast_child(member)));
       pony_assert(member_value != NULL);
-      args[arg] = gen_expr(c, member_value);
+      args[field] = gen_expr(c, member_value);
   }
-  pony_assert(arg == t->field_count);
+  pony_assert(field == field_count);
 
-  LLVMValueRef inst = LLVMConstNamedStruct(c_t->structure, args, arg);
+  if (ast_id(type) == TK_TUPLETYPE)
+  {
+    // Tuples are slightly different, they have an inner struct that contains
+    // the elements.
+    LLVMTypeRef inner_ty = LLVMStructGetTypeAtIndex(c_t->structure, 1);
+    args[1] = LLVMConstNamedStruct(inner_ty, &args[1], field_count - 1)
+    field_count = 2;
+  }
+
+  LLVMValueRef inst = LLVMConstNamedStruct(c_t->structure, args, field_count);
   LLVMValueRef g_inst = LLVMAddGlobal(c->module, c_t->structure, object_name);
   LLVMSetInitializer(g_inst, inst);
   LLVMSetGlobalConstant(g_inst, true);

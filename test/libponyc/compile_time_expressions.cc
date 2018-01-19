@@ -264,7 +264,16 @@ TEST_F(CompileTimeExpressionTest, CompileTimeCompileTimeObjectNoAlias)
   TEST_COMPILE(src);
 }
 
-/*
+TEST_F(CompileTimeExpressionTest, CompileTimeCompileTimeTuple)
+{
+  const char* src =
+    "actor Main\n"
+    "  new create(env: Env) =>\n"
+    "    let t: (U32, U32, U32) = # (1, 2, 3)";
+
+  TEST_COMPILE(src);
+}
+
 // FIXME: This test causes an infinite loop somewhere
 TEST_F(CompileTimeExpressionTest, CompileTimeNonBuiltinIntConstructor)
 {
@@ -276,4 +285,3 @@ TEST_F(CompileTimeExpressionTest, CompileTimeNonBuiltinIntConstructor)
   set_builtin(NULL);
   TEST_COMPILE(src);
 }
-*/
