@@ -1,6 +1,9 @@
 #include "lexint.h"
 #include "ponyassert.h"
+#include "stringtab.h"
+#include "../../libponyrt/mem/pool.h"
 #include <stdio.h>
+#include <string.h>
 #include <math.h>
 
 #if !defined(PLATFORM_IS_ILP32) && !defined(PLATFORM_IS_WINDOWS)
@@ -458,4 +461,44 @@ void lexint_negate(lexint_t* dst, lexint_t* src)
   lexint_t t;
   lexint_zero(&t);
   lexint_sub(dst, &t, src);
+}
+
+void lexint_mod64(lexint_t* dst, lexint_t* a, uint64_t b)
+{
+  // a % b = a - (b * (a // b))
+  lexint_div64(dst, a, b);
+  lexint_mul64(dst, dst, b);
+  lexint_sub(dst, a, dst);
+}
+
+const char* lexint_string(const lexint_t* src)
+{
+  lexint_t tmp;
+  memcpy(&tmp, src, sizeof(lexint_t));
+
+  // Build up the string representation of the lexint by repeated division.
+  // Pre-prending each character onto the string to give the increasing powers
+  // of 10.
+  char *result = (char*)ponyint_pool_alloc_size(64);
+  char *start = result + 63;
+  *start = '\0';
+  while(tmp.high != 0 || tmp.low != 0)
+  {
+    lexint_t tmp2;
+    memcpy(&tmp2, &tmp, sizeof(lexint_t));
+
+    // Compute the integer division
+    lexint_div64(&tmp, &tmp, 10);
+
+    // Find what was lost during the division
+    lexint_t rem;
+    lexint_mul64(&rem, &tmp, 10);
+    lexint_sub(&rem, &tmp2, &rem);
+
+    // Place that in front of the string we're building up
+    *(--start) = (char)('0' + rem.low);
+  }
+  const char* toret = stringtab(start);
+  ponyint_pool_free_size(64, result);
+  return toret;
 }

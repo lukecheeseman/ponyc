@@ -47,6 +47,8 @@ void lexint_div(lexint_t* dst, lexint_t* a, lexint_t* b);
 
 void lexint_div64(lexint_t* dst, lexint_t* a, uint64_t b);
 
+void lexint_mod64(lexint_t* dst, lexint_t* a, uint64_t b);
+
 void lexint_char(lexint_t* i, int c);
 
 bool lexint_accum(lexint_t* i, uint64_t digit, uint64_t base);
@@ -68,6 +70,8 @@ void lexint_xor(lexint_t* dst, lexint_t* a, lexint_t* b);
 void lexint_xor64(lexint_t* dst, lexint_t* a, uint64_t b);
 
 void lexint_not(lexint_t* dst, lexint_t* src);
+
+const char* lexint_string(const lexint_t* src);
 
 PONY_EXTERN_C_END
 

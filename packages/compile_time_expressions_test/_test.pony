@@ -10,6 +10,7 @@ actor Main is TestList
 
   fun tag tests(test: PonyTest) =>
     test(_TestLiterals)
+    test(_TestCompileTimeTuples)
     test(_TestSeq)
     test(_TestNegation)
     test(_TestArithmetic)
@@ -33,7 +34,6 @@ actor Main is TestList
     /*
     test(_TestCompileTimeObjectMethod)
     test(_TestCompileTimeObjectEmbeddedField)
-    test(_TestCompileTimeTuples)
     */
 
 class iso _TestLiterals is UnitTest
@@ -526,6 +526,17 @@ class iso _TestCompileTimeObjectMethodWritesVar is UnitTest
                       c()
                       c.f))
 
+class iso _TestCompileTimeTuples is UnitTest
+
+  fun name(): String => "CompileTimeExpression/CompileTimeTuples"
+
+  fun apply(h: TestHelper) =>
+    let x: (U32, Bool) = # (12, true)
+    h.assert_eq[U32](# x._1, 12)
+    h.assert_eq[Bool](# x._2, true)
+    h.assert_eq[U32](# x._1, x._1)
+    h.assert_eq[Bool](# x._2, x._2)
+
 /*
 class ClassWithEmbeddedField
   embed ef: ClassWithField val
@@ -568,15 +579,4 @@ class iso _TestCompileTimeObjectEmbeddedField is UnitTest
     let static_f = #(ClassWithEmbeddedField(2123).ef.f)
     let dynamic_f = ClassWithEmbeddedField(2123).ef.f
     h.assert_eq[U32](static_f, dynamic_f)
-
-class iso _TestCompileTimeTuples is UnitTest
-
-  fun name(): String => "CompileTimeExpression/CompileTimeTuples"
-
-  fun apply(h: TestHelper) =>
-    let x: (U32, String) = # (12, "Hello")
-    h.assert_eq[U32](# x._1, 12)
-    h.assert_eq[String](# x._2, "Hello")
-    h.assert_eq[U32](# x._1, x._1)
-    h.assert_eq[String](# x._2, x._2)
 */

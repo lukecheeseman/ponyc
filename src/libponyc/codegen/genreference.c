@@ -653,7 +653,7 @@ LLVMValueRef gen_constant_object(compile_t* c, ast_t* ast)
     // Tuples are slightly different, they have an inner struct that contains
     // the elements.
     LLVMTypeRef inner_ty = LLVMStructGetTypeAtIndex(c_t->structure, 1);
-    args[1] = LLVMConstNamedStruct(inner_ty, &args[1], field_count - 1)
+    args[1] = LLVMConstNamedStruct(inner_ty, &args[1], field_count - 1);
     field_count = 2;
   }
 

@@ -392,9 +392,26 @@ static bool evaluate(pass_opt_t* opt, ast_t* this, ast_t* expression,
       }
 
       construct_object(opt, evaluated_tuple, result);
+      return true;
+    }
 
-      /*
-      */
+    case TK_TUPLEELEMREF:
+    {
+      AST_GET_CHILDREN(expression, receiver, idx)
+      ast_t* evaluated_receiver;
+      if(!evaluate(opt, this, receiver, &evaluated_receiver))
+        return false;
+
+      pony_assert(ast_id(idx) == TK_INT);
+      lexint_t tmp;
+      lexint_add64(&tmp, ast_int(idx), 1);
+      printbuf_t* buf = printbuf_new();
+      printbuf(buf, "_%s", lexint_string(&tmp));
+      const char* idx_str = stringtab(buf->m);
+      printbuf_free(buf);
+
+      *result = ast_getvalue(evaluated_receiver, idx_str);
+      pony_assert(*result != NULL);
       return true;
     }
 
