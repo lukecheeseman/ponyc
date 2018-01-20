@@ -274,7 +274,6 @@ TEST_F(CompileTimeExpressionTest, CompileTimeCompileTimeTuple)
   TEST_COMPILE(src);
 }
 
-// FIXME: This test causes an infinite loop somewhere
 TEST_F(CompileTimeExpressionTest, CompileTimeNonBuiltinIntConstructor)
 {
   const char* src =
@@ -283,5 +282,23 @@ TEST_F(CompileTimeExpressionTest, CompileTimeNonBuiltinIntConstructor)
     "    let x = # (U32(2).max_value() - 1)";
 
   set_builtin(NULL);
+  TEST_COMPILE(src);
+}
+
+TEST_F(CompileTimeExpressionTest, NestedObjectsWithRepeatedFieldName)
+{
+  const char* src =
+    "class C1\n"
+    "  let f: U32\n"
+    "  new create(f': U32) => f = f'\n"
+    "\n"
+    "class C2\n"
+    "  let f: C1\n"
+    "  new create(x: U32) => f = C1(x)\n"
+    "\n"
+    "actor Main\n"
+    "  new create(env: Env) =>\n"
+    "    let c: C2 val = # C2(4)";
+
   TEST_COMPILE(src);
 }

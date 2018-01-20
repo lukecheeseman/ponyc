@@ -192,14 +192,14 @@ bool construct_object(pass_opt_t* opt, ast_t* from, ast_t** result)
         token_id member_id = ast_id(member);
         // Store all the fields that appear in this object, their values can be
         // found in the symbol table.
-        if(member_id == TK_FVAR || member_id == TK_FLET || member_id == TK_EMBED)
+        if(member_id == TK_FVAR || member_id == TK_FLET)
         {
           sym_status_t s;
           ast_t* member_ast = ast_get(class_def, ast_name(ast_child(member)), &s);
           pony_assert(member_ast != NULL);
 
           pony_assert(ast_set(*result, ast_name(ast_child(member)), member_ast, s,
-                      false));
+                      true));
           ast_append(*result, member);
         }
 
