@@ -31,10 +31,8 @@ actor Main is TestList
     test(_TestRecursiveFunction)
     test(_TestParametricFunction)
     test(_TestCompileTimeObjectField)
-    /*
     test(_TestCompileTimeObjectMethod)
     test(_TestCompileTimeObjectEmbeddedField)
-    */
 
 class iso _TestLiterals is UnitTest
 
@@ -537,25 +535,6 @@ class iso _TestCompileTimeTuples is UnitTest
     h.assert_eq[U32](# x._1, x._1)
     h.assert_eq[Bool](# x._2, x._2)
 
-/*
-class ClassWithEmbeddedField
-  embed ef: ClassWithField val
-
-  fun eq(o: ClassWithEmbeddedField box): Bool => f == o.f
-
-  new val create(f: U32) => ef = ClassWithField(f)
-
-class iso _TestCompileTimeObjectField is UnitTest
-
-  fun name(): String => "CompileTimeExression/CompileTimeObjectField"
-
-  fun apply(h: TestHelper) =>
-    h.assert_eq[ClassWithField]((#ClassWithEmbeddedField(48)),
-                                ClassWithEmbeddedField(48))
-    h.assert_eq[U32]((#ClassWithField(48)).f, ClassWithField(48).f)
-*/
-
-/*
 class ClassWithEmbeddedField
   embed ef: ClassWithField val
 
@@ -572,11 +551,10 @@ class iso _TestCompileTimeObjectEmbeddedField is UnitTest
     let dynamic_c = ClassWithEmbeddedField(982)
     h.assert_eq[U32](static_c.ef.f, dynamic_c.ef.f)
 
-    let static_ef = #(ClassWithEmbeddedField(78).ef)
-    let dynamic_ef = ClassWithEmbeddedField(78).ef
-    h.assert_eq[U32](static_ef.f, dynamic_ef.f)
+    //let static_ef = #(ClassWithEmbeddedField(78).ef)
+    //let dynamic_ef = ClassWithEmbeddedField(78).ef
+    //h.assert_eq[U32](static_ef.f, dynamic_ef.f)
 
     let static_f = #(ClassWithEmbeddedField(2123).ef.f)
     let dynamic_f = ClassWithEmbeddedField(2123).ef.f
     h.assert_eq[U32](static_f, dynamic_f)
-*/

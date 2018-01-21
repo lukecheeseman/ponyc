@@ -645,6 +645,13 @@ LLVMValueRef gen_constant_object(compile_t* c, ast_t* ast)
       ast_t* member_value = ast_getvalue(ast, ast_name(ast_child(member)));
       pony_assert(member_value != NULL);
       args[field] = gen_expr(c, member_value);
+
+      if(t->fields[field-1].embed)
+      {
+        LLVMValueRef constant = args[field];
+        args[field] = LLVMGetInitializer(constant);
+        LLVMDeleteGlobal(constant);
+      }
   }
   pony_assert(field == field_count);
 

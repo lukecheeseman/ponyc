@@ -80,15 +80,16 @@ static bool assign_value(pass_opt_t* opt, ast_t* this, ast_t* left,
     case TK_PARAM:
       return ast_setvalue(left, ast_name(ast_child(left)), right, result);
 
+    case TK_EMBEDREF:
     case TK_FLETREF:
     case TK_FVARREF:
     {
       AST_GET_CHILDREN(left, receiver, id);
 
       ast_t* evaluated_receiver;
-      evaluate(opt, this, receiver, &evaluated_receiver);
+      if(!evaluate(opt, this, receiver, &evaluated_receiver))
+        return false;
       pony_assert(evaluated_receiver != NULL);
-
       return ast_setvalue(evaluated_receiver, ast_name(id), right, result);
     }
 
@@ -192,12 +193,11 @@ bool construct_object(pass_opt_t* opt, ast_t* from, ast_t** result)
         token_id member_id = ast_id(member);
         // Store all the fields that appear in this object, their values can be
         // found in the symbol table.
-        if(member_id == TK_FVAR || member_id == TK_FLET)
+        if(member_id == TK_FVAR || member_id == TK_FLET || member_id == TK_EMBED)
         {
           sym_status_t s;
           ast_t* member_ast = ast_get(class_def, ast_name(ast_child(member)), &s);
           pony_assert(member_ast != NULL);
-
           pony_assert(ast_set(*result, ast_name(ast_child(member)), member_ast, s,
                       true));
           ast_append(*result, member);
@@ -317,7 +317,8 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* this, ast_t* expression,
       return false;
 
     evaluated_args[i++] = evaluated_arg;
-    assign_value(opt, method, parameter, evaluated_arg, NULL);
+    if(!assign_value(opt, method, parameter, evaluated_arg, NULL))
+      return false;
     parameter = ast_sibling(parameter);
     argument = ast_sibling(argument);
   }
@@ -431,8 +432,9 @@ static bool evaluate(pass_opt_t* opt, ast_t* this, ast_t* expression,
    // immutability of val. Once we have constructed a compile-time object it
    // becomes val once it leaves the compile-time expression so the var field
    // is also constant.
-   case TK_FVARREF:
+   case TK_EMBEDREF:
    case TK_FLETREF:
+   case TK_FVARREF:
     {
       AST_GET_CHILDREN(expression, receiver, id);
       ast_t* evaluated_receiver;
@@ -476,8 +478,7 @@ static bool evaluate(pass_opt_t* opt, ast_t* this, ast_t* expression,
       if(!evaluate(opt, this, right, &evaluated_right))
         return false;
 
-      assign_value(opt, this, left, evaluated_right, result);
-      return true;
+      return assign_value(opt, this, left, evaluated_right, result);
     }
 
     // Iterate through the sequence and evaluate in order, bailing if we error
@@ -488,7 +489,7 @@ static bool evaluate(pass_opt_t* opt, ast_t* this, ast_t* expression,
       for(ast_t* p = ast_child(expression); p != NULL; p = ast_sibling(p))
       {
         if(!evaluate(opt, this, p, &evaluated))
-          return false;;
+          return false;
       }
       *result = evaluated;
       return true;
@@ -619,7 +620,7 @@ ast_result_t pre_pass_evaluate(ast_t** astp, pass_opt_t* options)
   (void) options;
   ast_t* ast = *astp;
 
-  if(ast_id(ast) == TK_FLET)
+  if(ast_id(ast) == TK_FLET || ast_id(ast) == TK_EMBED)
   {
     AST_GET_CHILDREN(ast, f_id, f_type, f_init);
     if(ast_id(f_init) != TK_CONSTANT)
