@@ -32,6 +32,7 @@ actor Main is TestList
     test(_TestParametricFunction)
     test(_TestCompileTimeObjectField)
     test(_TestCompileTimeObjectMethod)
+    test(_TestCompileTimeObjectNestedClassField)
     test(_TestCompileTimeObjectEmbeddedField)
 
 class iso _TestLiterals is UnitTest
@@ -535,6 +536,30 @@ class iso _TestCompileTimeTuples is UnitTest
     h.assert_eq[U32](# x._1, x._1)
     h.assert_eq[Bool](# x._2, x._2)
 
+class ClassWithClassField
+  let cf: ClassWithField
+
+  new create(f: U32) => cf = ClassWithField(f)
+
+class iso _TestCompileTimeObjectNestedClassField is UnitTest
+
+  fun name(): String => "CompileTimeExpression/CompileTimeObjectNestedClassField"
+
+  fun apply(h: TestHelper) =>
+    h.assert_eq[U32](#(ClassWithClassField(12).cf.f), ClassWithClassField(12).cf.f)
+
+    let static_c = #(ClassWithClassField(982))
+    let dynamic_c = ClassWithClassField(982)
+    h.assert_eq[U32](static_c.cf.f, dynamic_c.cf.f)
+
+    let static_cf = #(ClassWithClassField(78).cf)
+    let dynamic_cf = ClassWithClassField(78).cf
+    h.assert_eq[U32](static_cf.f, dynamic_cf.f)
+
+    let static_f = #(ClassWithClassField(2123).cf.f)
+    let dynamic_f = ClassWithClassField(2123).cf.f
+    h.assert_eq[U32](static_f, dynamic_f)
+
 class ClassWithEmbeddedField
   embed ef: ClassWithField val
 
@@ -551,9 +576,9 @@ class iso _TestCompileTimeObjectEmbeddedField is UnitTest
     let dynamic_c = ClassWithEmbeddedField(982)
     h.assert_eq[U32](static_c.ef.f, dynamic_c.ef.f)
 
-    //let static_ef = #(ClassWithEmbeddedField(78).ef)
-    //let dynamic_ef = ClassWithEmbeddedField(78).ef
-    //h.assert_eq[U32](static_ef.f, dynamic_ef.f)
+    let static_ef = #(ClassWithEmbeddedField(78).ef)
+    let dynamic_ef = ClassWithEmbeddedField(78).ef
+    h.assert_eq[U32](static_ef.f, dynamic_ef.f)
 
     let static_f = #(ClassWithEmbeddedField(2123).ef.f)
     let dynamic_f = ClassWithEmbeddedField(2123).ef.f
