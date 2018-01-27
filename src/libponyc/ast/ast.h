@@ -120,10 +120,9 @@ ast_t* ast_getvalue(ast_t* ast, const char* name);
 ast_t* ast_get_case(ast_t* ast, const char* name, sym_status_t* status);
 bool ast_set(ast_t* ast, const char* name, ast_t* value, sym_status_t status,
   bool allow_shadowing);
-bool ast_setvalue_with_lookup(ast_t* ast, const char* name, ast_t* value,
+bool ast_find_and_setvalue(ast_t* ast, const char* name, ast_t* value,
   ast_t** prev);
-bool ast_setvalue_without_lookup(ast_t* ast, const char* name, ast_t* value,
-  ast_t** prev);
+bool ast_setvalue(ast_t* ast, const char* name, ast_t* value, ast_t** prev);
 void ast_setstatus(ast_t* ast, const char* name, sym_status_t status);
 void ast_inheritstatus(ast_t* dst, ast_t* src);
 void ast_inheritbranch(ast_t* dst, ast_t* src);

@@ -78,8 +78,8 @@ static bool assign_value(pass_opt_t* opt, ast_t* this, ast_t* left,
     case TK_LET:
     case TK_FLET:
     case TK_PARAM:
-      return ast_setvalue_with_lookup(left, ast_name(ast_child(left)), right,
-                                      result);
+      return ast_find_and_setvalue(left, ast_name(ast_child(left)), right,
+                                   result);
 
     case TK_EMBEDREF:
     case TK_FLETREF:
@@ -90,8 +90,7 @@ static bool assign_value(pass_opt_t* opt, ast_t* this, ast_t* left,
       ast_t* evaluated_receiver;
       if(!evaluate(opt, this, receiver, &evaluated_receiver))
         return false;
-      return ast_setvalue_without_lookup(evaluated_receiver, ast_name(id),
-                                         right, result);
+      return ast_setvalue(evaluated_receiver, ast_name(id), right, result);
     }
 
     default:
@@ -224,7 +223,7 @@ bool construct_object(pass_opt_t* opt, ast_t* from, ast_t** result)
           NODE(TK_FLET, ID(idx_str) TREE(ast_type(elem)) NONE));
 
         pony_assert(ast_set(*result, idx_str, idx_field, SYM_DEFINED, false));
-        pony_assert(ast_setvalue_without_lookup(*result, idx_str, elem, NULL));
+        pony_assert(ast_setvalue(*result, idx_str, elem, NULL));
         ast_settype(idx_field, ast_type(elem));
 
         ast_append(*result, idx_field);

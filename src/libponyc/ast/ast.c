@@ -1142,34 +1142,33 @@ bool ast_set(ast_t* ast, const char* name, ast_t* value, sym_status_t status,
   return symtab_add(ast->symtab, name, value, status);
 }
 
-// If the old value is not of interest, NULL can be passed in as prev
-static bool ast_setvalue(ast_t* ast, const char* name, ast_t* value, ast_t** prev,
-  bool lookup)
+// If the old value is not of interest, NULL can be passed in as prev.
+// find determines whether the lookup goes into the encolsing scopes.
+static bool ast_setvalue_impl(ast_t* ast, const char* name, ast_t* value,
+  ast_t** prev, bool find)
 {
-  if (lookup) {
-    // First search to see if we have a definition of this ast in this, or any,
-    // enclosing scope. If we find one, assign it to prev and write in the new
-    // value.
-    ast_t* scope = ast;
-    ast_t* symtab_prev;
-    do
+  // First search to see if we have a definition of this ast in this, or any,
+  // enclosing scope. If we find one, assign it to prev and write in the new
+  // value.
+  ast_t* scope = ast;
+  ast_t* symtab_prev;
+  do
+  {
+    if(scope->symtab != NULL)
     {
-      if(scope->symtab != NULL)
+      sym_status_t status2;
+      symtab_prev = (ast_t*)symtab_find_value(scope->symtab, name, &status2);
+      if(symtab_prev != NULL)
       {
-        sym_status_t status2;
-        symtab_prev = (ast_t*)symtab_find_value(scope->symtab, name, &status2);
-        if(symtab_prev != NULL)
-        {
-          if(prev != NULL)
-            *prev = symtab_prev;
-          symtab_set_value(scope->symtab, name, value);
-          return true;
-        }
+        if(prev != NULL)
+          *prev = symtab_prev;
+        symtab_set_value(scope->symtab, name, value);
+        return true;
       }
+    }
 
-      scope = scope->parent;
-    } while((scope != NULL) && (token_get_id(scope->t) != TK_PROGRAM));
-  }
+    scope = scope->parent;
+  } while(find && (scope != NULL) && (token_get_id(scope->t) != TK_PROGRAM));
 
   // If no previous definition was found, then create a new mapping.
   if(prev != NULL)
@@ -1183,18 +1182,18 @@ static bool ast_setvalue(ast_t* ast, const char* name, ast_t* value, ast_t** pre
 }
 
 // Sets the value in the nearest symtable with a definition of the name.
-bool ast_setvalue_without_lookup(ast_t* ast, const char* name, ast_t* value,
+bool ast_setvalue(ast_t* ast, const char* name, ast_t* value,
   ast_t** prev)
 {
-  return ast_setvalue(ast, name, value, prev, false);
+  return ast_setvalue_impl(ast, name, value, prev, false);
 }
 
 // Sets the value in the nearest symtable with an existing value, if no is found
 // then creates a mapping in the nearest symtable with a definition of name.
-bool ast_setvalue_with_lookup(ast_t* ast, const char* name, ast_t* value,
+bool ast_find_and_setvalue(ast_t* ast, const char* name, ast_t* value,
   ast_t** prev)
 {
-  return ast_setvalue(ast, name, value, prev, true);
+  return ast_setvalue_impl(ast, name, value, prev, true);
 }
 
 ast_t* ast_getvalue(ast_t* ast, const char* name)
