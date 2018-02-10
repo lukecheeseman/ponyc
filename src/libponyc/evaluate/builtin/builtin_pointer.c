@@ -1,5 +1,5 @@
 #include "builtin_pointer.h"
-#include "method_table.h"
+#include "builtin.h"
 #include "../evaluate.h"
 #include "../../type/subtype.h"
 #include "../../../libponyrt/mem/pool.h"
@@ -125,14 +125,14 @@ bool pointer_unsafe(pass_opt_t* opt, ast_t* receiver, ast_t** args,
   return true;
 }
 
-void builtin_pointer_add_methods()
+void builtin_pointer_add_methods(pass_opt_t* opt)
 {
-  methodtab_add(stringtab("Pointer"), stringtab("create"), &pointer_create);
-  methodtab_add(stringtab("Pointer"), stringtab("_alloc"), &pointer_alloc);
-  methodtab_add(stringtab("Pointer"), stringtab("_realloc"), &pointer_realloc);
-  methodtab_add(stringtab("Pointer"), stringtab("_apply"), &pointer_apply);
-  methodtab_add(stringtab("Pointer"), stringtab("_update"), &pointer_update);
-  methodtab_add(stringtab("Pointer"), stringtab("_unsafe"), &pointer_unsafe);
-  methodtab_add(stringtab("Pointer"), stringtab("_offset"), &pointer_offset);
+  builtin_add(opt, "Pointer", "create", &pointer_create);
+  builtin_add(opt, "Pointer", "_alloc", &pointer_alloc);
+  builtin_add(opt, "Pointer", "_realloc", &pointer_realloc);
+  builtin_add(opt, "Pointer", "_apply", &pointer_apply);
+  builtin_add(opt, "Pointer", "_update", &pointer_update);
+  builtin_add(opt, "Pointer", "_unsafe", &pointer_unsafe);
+  builtin_add(opt, "Pointer", "_offset", &pointer_offset);
 }
 

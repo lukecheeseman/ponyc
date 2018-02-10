@@ -1,9 +1,8 @@
+#include <string.h>
 #include "evaluate.h"
-#include "builtin/method_table.h"
 #include "../ast/astbuild.h"
 #include "../ast/lexer.h"
 #include "../ast/printbuf.h"
-#include "../codegen/codegen.h"
 #include "../expr/literal.h"
 #include "../type/alias.h"
 #include "../type/assemble.h"
@@ -13,17 +12,18 @@
 #include "../pass/expr.h"
 #include "../pkg/package.h"
 #include "ponyassert.h"
+#include "../../libponyrt/mem/pool.h"
 
 void evaluate_init(pass_opt_t* opt)
 {
   if(opt->limit >= PASS_EVALUATE)
-    methodtab_init();
+    builtin_init(opt);
 }
 
 void evaluate_done(pass_opt_t* opt)
 {
   if(opt->limit >= PASS_EVALUATE)
-    methodtab_done();
+    builtin_done(opt);
 }
 
 bool expr_constant(pass_opt_t* opt, ast_t* ast)
@@ -56,8 +56,7 @@ bool expr_constant(pass_opt_t* opt, ast_t* ast)
   return true;
 }
 
-static bool evaluate(pass_opt_t* opt, ast_t* this, ast_t* expression,
-  ast_t** result);
+static bool evaluate(pass_opt_t* opt, ast_t* this, ast_t* expression, ast_t** result);
 
 /*
  * Construct a mapping from the given lhs identifier to the rhs value. This
@@ -100,7 +99,7 @@ static bool assign_value(pass_opt_t* opt, ast_t* this, ast_t* left,
 }
 
 // Bind a value so that it can be used in later compile-time expressions
-static bool bind_value(pass_opt_t* opt, ast_t* left, ast_t* right,
+static bool bind_value(pass_opt_t* opt, ast_t* this, ast_t* left, ast_t* right,
   ast_t** result)
 {
   (void) opt;
@@ -112,7 +111,7 @@ static bool bind_value(pass_opt_t* opt, ast_t* left, ast_t* right,
      left_id == TK_FVAR || left_id == TK_FVARREF)
     return false;
 
-  return assign_value(opt, NULL, left, right, result);
+  return assign_value(opt, this, left, right, result);
 }
 
 static void construct_object_hygienic_name(printbuf_t* buf, pass_opt_t* opt,
@@ -220,7 +219,7 @@ bool construct_object(pass_opt_t* opt, ast_t* from, ast_t** result)
         const char* idx_str = stringtab(buf->m);
         printbuf_free(buf);
         BUILD(idx_field, elem,
-          NODE(TK_FLET, ID(idx_str) TREE(ast_type(elem)) NONE));
+          NODE(TK_FLET, ID(idx_str) TREE(ast_type(elem)) NONE NONE));
 
         pony_assert(ast_set(*result, idx_str, idx_field, SYM_DEFINED, false));
         pony_assert(ast_setvalue(*result, idx_str, elem, NULL));
@@ -264,7 +263,7 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* this, ast_t* expression,
     return false;
 
   ast_t* receiver_type = ast_type(evaluated_receiver);
-  // Look throw the this type arrow
+  // Look through the this type arrow
   if((ast_id(receiver_type) == TK_ARROW) &&
     (ast_id(ast_child(receiver_type)) == TK_THISTYPE))
     receiver_type = ast_childidx(receiver_type, 1);
@@ -285,8 +284,7 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* this, ast_t* expression,
   ast_t* def
     = ast_get(postfix, ast_name(ast_childidx(receiver_type, 1)), NULL);
   frame_push(&opt->check, ast_nearest(def, TK_PACKAGE));
-  deferred_reification_t* method_def = lookup(opt, def, receiver_type,
-                                              ast_name(method_id));
+  deferred_reification_t* method_def = lookup(opt, def, receiver_type, ast_name(method_id));
   pony_assert(method_def != NULL);
   ast_t* method = deferred_reify(method_def, method_def->ast, opt);
   pony_assert(method != NULL);
@@ -317,7 +315,7 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* this, ast_t* expression,
       return false;
 
     evaluated_args[i++] = evaluated_arg;
-    if(!assign_value(opt, method, parameter, evaluated_arg, NULL))
+    if(!assign_value(opt, this, parameter, evaluated_arg, NULL))
       return false;
     parameter = ast_sibling(parameter);
     argument = ast_sibling(argument);
@@ -326,7 +324,8 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* this, ast_t* expression,
 
   // First lookup to see if we have a builtin method to evaluate the expression
   method_ptr_t builtin_method
-    = methodtab_lookup(evaluated_receiver, receiver_type, ast_name(method_id));
+    = builtin_lookup(opt, evaluated_receiver, receiver_type,
+                     ast_name(method_id));
   if(builtin_method != NULL)
     return builtin_method(opt, evaluated_receiver, evaluated_args, result);
 
@@ -335,10 +334,10 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* this, ast_t* expression,
 
   // If this is a method execute the body. If the receiver is an integer/bool
   // type then, even if this is a constructor, just execute the body as we don't
-  // want to construcut any object in this case (there would be nothing to put
+  // want to construct any object in this case (there would be nothing to put
   // in it - so we just use the raw values).
-  if(ast_id(method) != TK_NEW ||
-     is_integer(receiver_type) || is_bool(receiver_type))
+  if(ast_id(method) != TK_NEW || is_integer(receiver_type) ||
+     is_bool(receiver_type))
     return evaluate(opt, evaluated_receiver, method_body, result);
 
   // If the method is a constructor then we need to build a compile time object
@@ -348,12 +347,8 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* this, ast_t* expression,
     return false;
 
   // Now run the constructor to initialise the fields etc.
-  this = *result;
-  if(!evaluate(opt, this, method_body, result))
-    return false;
-
-  *result = this;
-  return true;
+  ast_t* dontcare;
+  return evaluate(opt, *result, method_body, &dontcare);
 }
 
 static bool evaluate(pass_opt_t* opt, ast_t* this, ast_t* expression,
@@ -499,8 +494,10 @@ static bool evaluate(pass_opt_t* opt, ast_t* this, ast_t* expression,
       return evaluate_method(opt, this, expression, result);
 
     case TK_THIS:
+    {
       *result = this != NULL ? this : expression;
       return true;
+    }
 
     case TK_IF:
     case TK_ELSEIF:
@@ -608,7 +605,7 @@ ast_result_t pass_evaluate(ast_t** astp, pass_opt_t* options)
     pony_assert(result != NULL);
 
     if(ast_id(ast_parent(ast)) == TK_ASSIGN)
-      bind_value(options, ast_previous(ast), result, NULL);
+      bind_value(options, NULL, ast_previous(ast), result, NULL);
     ast_replace(astp, result);
   }
 
@@ -633,7 +630,7 @@ ast_result_t pre_pass_evaluate(ast_t** astp, pass_opt_t* options)
       return AST_ERROR;
     }
 
-    pony_assert(bind_value(options, ast, result, NULL));
+    pony_assert(bind_value(options, NULL, ast, result, NULL));
     ast_swap(f_init, ast_from(f_init, TK_NONE));
   }
 

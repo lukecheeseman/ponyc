@@ -1,10 +1,9 @@
 #ifndef BUILTIN_POINTER_H
 #define BUILTIN_POINTER_H
 
-#include "../../ast/ast.h"
 #include "../../pass/pass.h"
 
-void builtin_pointer_add_methods();
+void builtin_pointer_add_methods(pass_opt_t* opt);
 
 typedef struct pointer pointer_t;
 

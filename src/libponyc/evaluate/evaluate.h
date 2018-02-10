@@ -1,10 +1,13 @@
 #ifndef EVALUATE_H
 #define EVALUATE_H
 
+#include "builtin/builtin.h"
 #include "../ast/ast.h"
-#include "../pass/pass.h"
+#include "../codegen/codegen.h"
 
 PONY_EXTERN_C_BEGIN
+
+typedef struct pass_opt_t pass_opt_t;
 
 void evaluate_init(pass_opt_t* opt);
 

@@ -1,5 +1,5 @@
 #include "builtin_int.h"
-#include "method_table.h"
+#include "builtin.h"
 #include "../../ast/ast.h"
 #include "../../ast/astbuild.h"
 #include "../../type/assemble.h"
@@ -336,21 +336,6 @@ bool int_usize(pass_opt_t* opt, ast_t* receiver, ast_t** args, ast_t** result)
   return int_cast_to_type(opt, receiver, result, "USize");
 }
 
-#include "../../codegen/codegen.h"
-#include "../../codegen/gentype.h"
-
-// FIXME: this should use the target data size
-static long long unsigned int sizeof_type(pass_opt_t* opt, ast_t* type)
-{
-  pony_assert(is_integer(type));
-  compile_t c;
-  memset(&c, 0, sizeof(compile_t));
-  codegen_init_target_information(&c, opt, "compile-time", false);
-  codegen_init_datatypes(&c);
-  LLVMTypeRef target_type = codegen_get_primitive_type(&c, ast_name(ast_childidx(type, 1)));
-  return LLVMABISizeOfType(c.target_data, target_type);
-}
-
 bool int_clz(pass_opt_t* opt, ast_t* receiver, ast_t** args, ast_t** result)
 {
   (void) opt;
@@ -358,7 +343,7 @@ bool int_clz(pass_opt_t* opt, ast_t* receiver, ast_t** args, ast_t** result)
   if(!int_check_operand(receiver))
     return false;
 
-  uint64_t bits = 8 * sizeof_type(opt, ast_type(receiver));
+  uint64_t bits = 8 * builtin_sizeof(opt, ast_type(receiver));
 
   lexint_t mask;
   lexint_zero(&mask);
@@ -381,45 +366,45 @@ bool int_clz(pass_opt_t* opt, ast_t* receiver, ast_t** args, ast_t** result)
   return true;
 }
 
-void builtin_int_add_methods()
+void builtin_int_add_methods(pass_opt_t* opt)
 {
-  methodtab_add(stringtab("integer"), stringtab("create"), &int_create);
+  builtin_add(opt, "integer", "create", &int_create);
 
-  methodtab_add(stringtab("integer"), stringtab("add"), &int_add);
-  methodtab_add(stringtab("integer"), stringtab("sub"), &int_sub);
-  methodtab_add(stringtab("integer"), stringtab("mul"), &int_mul);
-  methodtab_add(stringtab("integer"), stringtab("div"), &int_div);
+  builtin_add(opt, "integer", "add", &int_add);
+  builtin_add(opt, "integer", "sub", &int_sub);
+  builtin_add(opt, "integer", "mul", &int_mul);
+  builtin_add(opt, "integer", "div", &int_div);
 
-  methodtab_add(stringtab("integer"), stringtab("neg"), &int_neg);
-  methodtab_add(stringtab("integer"), stringtab("eq"), &int_eq);
-  methodtab_add(stringtab("integer"), stringtab("ne"), &int_ne);
-  methodtab_add(stringtab("integer"), stringtab("lt"), &int_lt);
-  methodtab_add(stringtab("integer"), stringtab("le"), &int_le);
-  methodtab_add(stringtab("integer"), stringtab("gt"), &int_gt);
-  methodtab_add(stringtab("integer"), stringtab("ge"), &int_ge);
+  builtin_add(opt, "integer", "neg", &int_neg);
+  builtin_add(opt, "integer", "eq", &int_eq);
+  builtin_add(opt, "integer", "ne", &int_ne);
+  builtin_add(opt, "integer", "lt", &int_lt);
+  builtin_add(opt, "integer", "le", &int_le);
+  builtin_add(opt, "integer", "gt", &int_gt);
+  builtin_add(opt, "integer", "ge", &int_ge);
 
-  methodtab_add(stringtab("integer"), stringtab("op_and"), &int_and);
-  methodtab_add(stringtab("integer"), stringtab("op_or"), &int_or);
-  methodtab_add(stringtab("integer"), stringtab("op_xor"), &int_xor);
-  methodtab_add(stringtab("integer"), stringtab("op_not"), &int_not);
-  methodtab_add(stringtab("integer"), stringtab("shl"), &int_shl);
-  methodtab_add(stringtab("integer"), stringtab("shr"), &int_shr);
+  builtin_add(opt, "integer", "op_and", &int_and);
+  builtin_add(opt, "integer", "op_or", &int_or);
+  builtin_add(opt, "integer", "op_xor", &int_xor);
+  builtin_add(opt, "integer", "op_not", &int_not);
+  builtin_add(opt, "integer", "shl", &int_shl);
+  builtin_add(opt, "integer", "shr", &int_shr);
 
-  methodtab_add(stringtab("integer"), stringtab("i8"), &int_i8);
-  methodtab_add(stringtab("integer"), stringtab("i16"), &int_i16);
-  methodtab_add(stringtab("integer"), stringtab("i32"), &int_i32);
-  methodtab_add(stringtab("integer"), stringtab("i64"), &int_i64);
-  methodtab_add(stringtab("integer"), stringtab("i128"), &int_i128);
-  methodtab_add(stringtab("integer"), stringtab("ilong"), &int_ilong);
-  methodtab_add(stringtab("integer"), stringtab("isize"), &int_isize);
-  methodtab_add(stringtab("integer"), stringtab("u8"), &int_u8);
-  methodtab_add(stringtab("integer"), stringtab("u16"), &int_u16);
-  methodtab_add(stringtab("integer"), stringtab("u32"), &int_u32);
-  methodtab_add(stringtab("integer"), stringtab("u64"), &int_u64);
-  methodtab_add(stringtab("integer"), stringtab("u128"), &int_u128);
-  methodtab_add(stringtab("integer"), stringtab("ulong"), &int_ulong);
-  methodtab_add(stringtab("integer"), stringtab("usize"), &int_usize);
+  builtin_add(opt, "integer", "i8", &int_i8);
+  builtin_add(opt, "integer", "i16", &int_i16);
+  builtin_add(opt, "integer", "i32", &int_i32);
+  builtin_add(opt, "integer", "i64", &int_i64);
+  builtin_add(opt, "integer", "i128", &int_i128);
+  builtin_add(opt, "integer", "ilong", &int_ilong);
+  builtin_add(opt, "integer", "isize", &int_isize);
+  builtin_add(opt, "integer", "u8", &int_u8);
+  builtin_add(opt, "integer", "u16", &int_u16);
+  builtin_add(opt, "integer", "u32", &int_u32);
+  builtin_add(opt, "integer", "u64", &int_u64);
+  builtin_add(opt, "integer", "u128", &int_u128);
+  builtin_add(opt, "integer", "ulong", &int_ulong);
+  builtin_add(opt, "integer", "usize", &int_usize);
 
-  methodtab_add(stringtab("integer"), stringtab("clz"), &int_clz);
+  builtin_add(opt, "integer", "clz", &int_clz);
 }
 

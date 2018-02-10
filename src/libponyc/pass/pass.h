@@ -259,7 +259,7 @@ typedef enum pass_id
 
 typedef struct magic_package_t magic_package_t;
 typedef struct plugins_t plugins_t;
-
+typedef struct builtin_context builtin_context_t;
 /** Pass options.
  */
 typedef struct pass_opt_t
@@ -304,6 +304,7 @@ typedef struct pass_opt_t
   typecheck_t check;
 
   plugins_t* plugins;
+  builtin_context_t* builtin_ctx;
 
   void* data; // User-defined data for unit test callbacks.
 } pass_opt_t;

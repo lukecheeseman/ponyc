@@ -1,5 +1,5 @@
 #include "builtin_bool.h"
-#include "method_table.h"
+#include "builtin.h"
 #include "../../ast/ast.h"
 #include "../../ast/astbuild.h"
 #include "../../type/assemble.h"
@@ -95,13 +95,13 @@ bool bool_not(pass_opt_t* opt, ast_t* receiver, ast_t** args, ast_t** result)
   return true;
 }
 
-void builtin_bool_add_methods()
+void builtin_bool_add_methods(pass_opt_t* opt)
 {
-  methodtab_add(stringtab("Bool"), stringtab("eq"), &bool_eq);
-  methodtab_add(stringtab("Bool"), stringtab("ne"), &bool_ne);
-  methodtab_add(stringtab("Bool"), stringtab("op_and"), &bool_and);
-  methodtab_add(stringtab("Bool"), stringtab("op_or"), &bool_or);
-  methodtab_add(stringtab("Bool"), stringtab("op_xor"), &bool_xor);
-  methodtab_add(stringtab("Bool"), stringtab("op_not"), &bool_not);
+  builtin_add(opt, "Bool", "eq", &bool_eq);
+  builtin_add(opt, "Bool", "ne", &bool_ne);
+  builtin_add(opt, "Bool", "op_and", &bool_and);
+  builtin_add(opt, "Bool", "op_or", &bool_or);
+  builtin_add(opt, "Bool", "op_xor", &bool_xor);
+  builtin_add(opt, "Bool", "op_not", &bool_not);
 }
 
