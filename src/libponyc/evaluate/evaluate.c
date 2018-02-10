@@ -247,58 +247,32 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* this, ast_t* expression,
   // Named arguments have already been converted to positional
   pony_assert(ast_id(named) == TK_NONE);
 
-  // Check if this is a parametric function type and if so keep hold
-  // of the typeargs for later.
-  ast_t* typeargs = NULL;
+  // Check if this is a parametric function type, the function lives one level
+  // deeper. The deferred_reify later takes care of the parametric methods for
+  // us.
   if(ast_id(ast_childidx(postfix, 1)) == TK_TYPEARGS)
-  {
-    typeargs = ast_childidx(postfix, 1);
     postfix = ast_child(postfix);
-  }
 
   AST_GET_CHILDREN(postfix, receiver, method_id);
-
-  ast_t* evaluated_receiver;
-  if(!evaluate(opt, this, receiver, &evaluated_receiver))
-    return false;
-
-  ast_t* receiver_type = ast_type(evaluated_receiver);
+  ast_t* receiver_type = ast_type(receiver);
   // Look through the this type arrow
   if((ast_id(receiver_type) == TK_ARROW) &&
     (ast_id(ast_child(receiver_type)) == TK_THISTYPE))
     receiver_type = ast_childidx(receiver_type, 1);
 
-  // We cannot evaluate compile-time behaviours, we shouldn't get here as we
-  // cannot construct compile-time actors.
-  if(ast_id(postfix) == TK_BEREF)
-  {
-    ast_error(opt->check.errors, postfix,
-              "cannot evaluate compile-time behaviours");
-    return false;
-  }
-
-  // If there was no built-in then lookup the rdefintion of the function:
+  // If there was no built-in then lookup the defintion of the function:
   // we push the package from where the function came from so that the lookup
   // proceeds as if we were in the correct package as we may, through private
   // methods within public methods, require access to private memebers.
-  ast_t* def
-    = ast_get(postfix, ast_name(ast_childidx(receiver_type, 1)), NULL);
+  ast_t* def = ast_get(postfix, ast_name(ast_childidx(receiver_type, 1)), NULL);
   frame_push(&opt->check, ast_nearest(def, TK_PACKAGE));
-  deferred_reification_t* method_def = lookup(opt, def, receiver_type, ast_name(method_id));
+  deferred_reification_t* method_def = lookup(opt, def, receiver_type,
+                                              ast_name(method_id));
   pony_assert(method_def != NULL);
   ast_t* method = deferred_reify(method_def, method_def->ast, opt);
   pony_assert(method != NULL);
   deferred_reify_free(method_def);
   frame_pop(&opt->check);
-
-  if(typeargs != NULL)
-  {
-    ast_t* typeparams = ast_childidx(method, 2);
-    ast_t* r_method = reify(method, typeparams, typeargs, opt, true);
-    ast_free_unattached(method);
-    method = r_method;
-    pony_assert(method != NULL);
-  }
 
   // Evaluate all the arguments and assign them to the repsective paramter
   // names, we also build up an array of the arguments in case we're going to
@@ -322,33 +296,66 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* this, ast_t* expression,
   }
   pony_assert(argument == NULL && parameter == NULL);
 
-  // First lookup to see if we have a builtin method to evaluate the expression
-  method_ptr_t builtin_method
-    = builtin_lookup(opt, evaluated_receiver, receiver_type,
-                     ast_name(method_id));
+  // Lookup to see if we have a builtin method to evaluate the expression
+  method_ptr_t builtin_method = builtin_lookup(opt, receiver, receiver_type,
+                                               ast_name(method_id));
+
+  ast_t* evaluated_receiver;
+  if(ast_id(method) == TK_NEW)
+    evaluated_receiver = this;
+  else if(!evaluate(opt, this, receiver, &evaluated_receiver))
+    return false;
+
   if(builtin_method != NULL)
     return builtin_method(opt, evaluated_receiver, evaluated_args, result);
 
   // Now in a position to evaluate the body
   ast_t* method_body = ast_childidx(method, 6);
+  return evaluate(opt, evaluated_receiver, method_body, result);
+}
 
-  // If this is a method execute the body. If the receiver is an integer/bool
-  // type then, even if this is a constructor, just execute the body as we don't
-  // want to construct any object in this case (there would be nothing to put
-  // in it - so we just use the raw values).
-  if(ast_id(method) != TK_NEW || is_integer(receiver_type) ||
-     is_bool(receiver_type))
-    return evaluate(opt, evaluated_receiver, method_body, result);
+static bool evaluate_call(pass_opt_t* opt, ast_t* this, ast_t* expression,
+  ast_t** result)
+{
+  pony_assert(expression != NULL);
+  ast_t* lhs = ast_child(expression);
+  switch(ast_id(lhs))
+  {
+    case TK_FUNREF:
+      return evaluate_method(opt, this, expression, result);
 
-  // If the method is a constructor then we need to build a compile time object
-  // adding the values of the fields as the children and setting the type
-  // to be the return type of the function body
-  if(!construct_object(opt, receiver, result))
-    return false;
+    case TK_NEWREF:
+    {
+      // If the receiver is an integer/bool type then, even if this is a
+      // constructor, just execute the body as we don't want to construct any
+      // object in this case (there would be nothing to put in it - so we just
+      // use the raw values).
+      ast_t* expression_type = ast_type(expression);
+      if(is_integer(expression_type) || is_bool(expression_type))
+        return evaluate_method(opt, this, expression, result);
 
-  // Now run the constructor to initialise the fields etc.
-  ast_t* dontcare;
-  return evaluate(opt, *result, method_body, &dontcare);
+      // If the method is a constructor then we need to build a compile time
+      // object adding the values of the fields as the children and setting the
+      // type to be the return type of the function body
+      if(!construct_object(opt, expression, result))
+        return false;
+
+      // Now run the constructor to initialise the fields etc.
+      ast_t* dontcare;
+      return evaluate_method(opt, *result, expression, &dontcare);
+    }
+
+    // We cannot evaluate compile-time behaviours, we shouldn't get here as we
+    // cannot construct compile-time actors.
+    case TK_BEREF:
+      ast_error(opt->check.errors, lhs,
+                "cannot evaluate compile-time behaviours");
+      return false;
+
+    default:
+      pony_assert(0);
+      return false;
+  }
 }
 
 static bool evaluate(pass_opt_t* opt, ast_t* this, ast_t* expression,
@@ -491,7 +498,7 @@ static bool evaluate(pass_opt_t* opt, ast_t* this, ast_t* expression,
     }
 
     case TK_CALL:
-      return evaluate_method(opt, this, expression, result);
+      return evaluate_call(opt, this, expression, result);
 
     case TK_THIS:
     {

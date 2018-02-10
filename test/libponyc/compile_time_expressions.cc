@@ -302,3 +302,16 @@ TEST_F(CompileTimeExpressionTest, NestedObjectsWithRepeatedFieldName)
 
   TEST_COMPILE(src);
 }
+
+TEST_F(CompileTimeExpressionTest, ParametricConstructor)
+{
+  const char* src =
+    "class C1[A]\n"
+    "  new create[B](x: B) => true\n"
+    "\n"
+    "actor Main\n"
+    "  new create(env: Env) =>\n"
+    "    let c = # C1[U32].create[Bool](true)";
+
+  TEST_COMPILE(src);
+}

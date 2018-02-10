@@ -8,7 +8,8 @@ typedef struct builtin_context builtin_context_t;
 
 typedef struct method_entry_t method_entry_t;
 
-typedef bool (*method_ptr_t)(pass_opt_t* opt, ast_t*, ast_t**, ast_t**);
+typedef bool (*method_ptr_t)(pass_opt_t* opt, ast_t* receiver, ast_t** args,
+  ast_t** result);
 
 void builtin_init(pass_opt_t* opt);
 
