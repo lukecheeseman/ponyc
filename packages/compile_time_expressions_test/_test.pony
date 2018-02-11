@@ -35,6 +35,7 @@ actor Main is TestList
     test(_TestCompileTimeObjectNestedClassField)
     test(_TestCompileTimeObjectEmbeddedField)
     test(_TestFunctionChaining)
+    test(_TestCompileTimePrimitive)
 
 class iso _TestLiterals is UnitTest
 
@@ -598,8 +599,25 @@ class iso _TestFunctionChaining is UnitTest
 
   fun apply(h: TestHelper) =>
     h.assert_eq[U32](ClassWithVarAndIncrement(2).>apply().f,
-                     # ClassWithVarAndIncrement(2).>apply().f)
+                     # (ClassWithVarAndIncrement(2).>apply().f))
     h.assert_eq[U32](ClassWithVarAndIncrement(2).>apply().>apply().f,
-                     # ClassWithVarAndIncrement(2).>apply().>apply().f)
+                     # (ClassWithVarAndIncrement(2).>apply().>apply().f))
     h.assert_eq[U32](ClassWithVarAndIncrement(2).>apply().>apply().>apply().f,
-                     # ClassWithVarAndIncrement(2).>apply().>apply().>apply().f)
+                     # (ClassWithVarAndIncrement(2).>apply().>apply().>apply().f))
+
+primitive BasicPrimitive is (Equatable[BasicPrimitive] & Stringable)
+
+  fun string(): String iso^ => "BasicPrimitive".clone()
+
+class iso _TestCompileTimePrimitive is UnitTest
+
+  fun name(): String => "CompileTimeExpression/CompileTimePrimitive"
+
+  fun apply(h: TestHelper) =>
+    let p1 = BasicPrimitive
+    let p2 = # BasicPrimitive
+    h.assert_eq[BasicPrimitive](p1, p2)
+
+    let p3 = # BasicPrimitive
+    h.assert_eq[BasicPrimitive](p2, p3)
+    h.assert_true(#(p2 == p3))

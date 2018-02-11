@@ -3,6 +3,7 @@
 #include "../ast/astbuild.h"
 #include "../ast/lexer.h"
 #include "../ast/printbuf.h"
+#include "../codegen/genname.h"
 #include "../expr/literal.h"
 #include "../type/alias.h"
 #include "../type/assemble.h"
@@ -117,12 +118,19 @@ static bool bind_value(pass_opt_t* opt, ast_t* this, ast_t* left, ast_t* right,
 static bool construct_object_hygienic_name(printbuf_t* buf, pass_opt_t* opt,
   ast_t* type)
 {
+
   switch(ast_id(type))
   {
     case TK_NOMINAL:
     {
-      const char* type_name = ast_name(ast_childidx(type, 1));
-      ast_t* def = ast_get(type, type_name, NULL);
+      const char* type_name = genname_type(type);
+
+      ast_t* def = (ast_t*)ast_data(type);
+      if(ast_id(def) == TK_PRIMITIVE)
+      {
+        printbuf(buf, "%s", genname_instance(type_name));
+        return true;
+      }
 
       frame_push(&opt->check, ast_nearest(def, TK_PACKAGE));
       const char* s = package_hygienic_id(&opt->check);
@@ -570,6 +578,39 @@ static bool evaluate(pass_opt_t* opt, ast_t* this, ast_t* expression,
         return evaluate(opt, this, else_body, result);
 
       return true;
+    }
+
+    case TK_IS:
+    {
+      AST_GET_CHILDREN(expression, lhs, rhs);
+
+      ast_t* evaluated_lhs, *evaluated_rhs;
+      if(!evaluate(opt, this, lhs, &evaluated_lhs) ||
+         !evaluate(opt, this, rhs, &evaluated_rhs))
+        return false;
+
+      // If the comparison is based on objects then we can check name equality
+      if(ast_id(evaluated_lhs) == TK_CONSTANT_OBJECT)
+      {
+        const char* lhs_name = ast_name(ast_child(evaluated_lhs));
+        const char* rhs_name = ast_name(ast_child(evaluated_rhs));
+        BUILD_NO_DECL(*result, expression,
+          NODE(lhs_name == rhs_name ? TK_TRUE : TK_FALSE));
+        return true;
+      }
+
+      // Otherwise, it's some builtin, in which case the easiest approach is
+      // just to call the "eq" builtin method for the type.
+      method_ptr_t builtin_method = builtin_lookup(opt, lhs, ast_type(lhs),
+                                                   stringtab("eq"));
+      if(builtin_method == NULL)
+      {
+        ast_error(opt->check.errors, expression,
+          "unsupported compile-time comparison\n");
+        return false;
+      }
+
+      return builtin_method(opt, evaluated_lhs, &evaluated_rhs, result);
     }
 
     case TK_CONSUME:
