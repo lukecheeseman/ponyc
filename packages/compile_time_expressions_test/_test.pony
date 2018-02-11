@@ -34,6 +34,7 @@ actor Main is TestList
     test(_TestCompileTimeObjectMethod)
     test(_TestCompileTimeObjectNestedClassField)
     test(_TestCompileTimeObjectEmbeddedField)
+    test(_TestFunctionChaining)
 
 class iso _TestLiterals is UnitTest
 
@@ -583,3 +584,22 @@ class iso _TestCompileTimeObjectEmbeddedField is UnitTest
     let static_f = #(ClassWithEmbeddedField(2123).ef.f)
     let dynamic_f = ClassWithEmbeddedField(2123).ef.f
     h.assert_eq[U32](static_f, dynamic_f)
+
+class ClassWithVarAndIncrement
+  var f: U32
+
+  new create(f': U32) => f = consume f'
+
+  fun ref apply() => f = f + 1
+
+class iso _TestFunctionChaining is UnitTest
+
+  fun name(): String => "CompileTimeExpression/FunctionChaining"
+
+  fun apply(h: TestHelper) =>
+    h.assert_eq[U32](ClassWithVarAndIncrement(2).>apply().f,
+                     # ClassWithVarAndIncrement(2).>apply().f)
+    h.assert_eq[U32](ClassWithVarAndIncrement(2).>apply().>apply().f,
+                     # ClassWithVarAndIncrement(2).>apply().>apply().f)
+    h.assert_eq[U32](ClassWithVarAndIncrement(2).>apply().>apply().>apply().f,
+                     # ClassWithVarAndIncrement(2).>apply().>apply().>apply().f)

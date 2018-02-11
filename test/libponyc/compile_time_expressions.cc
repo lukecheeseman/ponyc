@@ -315,3 +315,18 @@ TEST_F(CompileTimeExpressionTest, ParametricConstructor)
 
   TEST_COMPILE(src);
 }
+
+TEST_F(CompileTimeExpressionTest, FunctionChaining)
+{
+  const char* src =
+    "class C1\n"
+    "  var x: U32 = 1\n"
+    "\n"
+    "  fun ref apply(x': U32) => x = consume x'\n"
+    "\n"
+    "actor Main\n"
+    "  new create(env: Env) =>\n"
+    "    let x: U32 = # (C1.>apply(2).>apply(72).x)\n";
+
+  TEST_COMPILE(src);
+}

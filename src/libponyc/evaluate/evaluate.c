@@ -114,7 +114,7 @@ static bool bind_value(pass_opt_t* opt, ast_t* this, ast_t* left, ast_t* right,
   return assign_value(opt, this, left, right, result);
 }
 
-static void construct_object_hygienic_name(printbuf_t* buf, pass_opt_t* opt,
+static bool construct_object_hygienic_name(printbuf_t* buf, pass_opt_t* opt,
   ast_t* type)
 {
   switch(ast_id(type))
@@ -129,7 +129,7 @@ static void construct_object_hygienic_name(printbuf_t* buf, pass_opt_t* opt,
       frame_pop(&opt->check);
 
       printbuf(buf, "%s_%s", type_name, s);
-      return;
+      return true;
     }
 
     case TK_TUPLETYPE:
@@ -141,12 +141,12 @@ static void construct_object_hygienic_name(printbuf_t* buf, pass_opt_t* opt,
         construct_object_hygienic_name(buf, opt, elem_type);
         elem_type = ast_sibling(elem_type);
       }
-      return;
+      return true;
     }
 
     default:
       pony_assert(0);
-      return;
+      return false;
   }
 }
 
@@ -154,7 +154,11 @@ static void construct_object_hygienic_name(printbuf_t* buf, pass_opt_t* opt,
 static const char* object_hygienic_name(pass_opt_t* opt, ast_t* type)
 {
   printbuf_t* buf = printbuf_new();
-  construct_object_hygienic_name(buf, opt, type);
+  if(!construct_object_hygienic_name(buf, opt, type))
+  {
+    printbuf_free(buf);
+    return NULL;
+  }
   const char* r = stringtab(buf->m);
   printbuf_free(buf);
   return r;
@@ -301,28 +305,25 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* this, ast_t* expression,
                                                ast_name(method_id));
 
   ast_t* evaluated_receiver;
-  if(ast_id(method) == TK_NEW)
-    evaluated_receiver = this;
-  else if(!evaluate(opt, this, receiver, &evaluated_receiver))
+  if(!evaluate(opt, this, receiver, &evaluated_receiver))
     return false;
 
   if(builtin_method != NULL)
     return builtin_method(opt, evaluated_receiver, evaluated_args, result);
 
-  // Now in a position to evaluate the body
   ast_t* method_body = ast_childidx(method, 6);
-  return evaluate(opt, evaluated_receiver, method_body, result);
-}
 
-static bool evaluate_call(pass_opt_t* opt, ast_t* this, ast_t* expression,
-  ast_t** result)
-{
-  pony_assert(expression != NULL);
-  ast_t* lhs = ast_child(expression);
-  switch(ast_id(lhs))
+  // Now in a position to evaluate the body
+  switch(ast_id(postfix))
   {
     case TK_FUNREF:
-      return evaluate_method(opt, this, expression, result);
+      return evaluate(opt, evaluated_receiver, method_body, result);
+
+    case TK_FUNCHAIN:
+      if(!evaluate(opt, evaluated_receiver, method_body, result))
+        return false;
+      *result = evaluated_receiver;
+      return true;
 
     case TK_NEWREF:
     {
@@ -332,23 +333,27 @@ static bool evaluate_call(pass_opt_t* opt, ast_t* this, ast_t* expression,
       // use the raw values).
       ast_t* expression_type = ast_type(expression);
       if(is_integer(expression_type) || is_bool(expression_type))
-        return evaluate_method(opt, this, expression, result);
+        return evaluate(opt, evaluated_receiver, method_body, result);
+
 
       // If the method is a constructor then we need to build a compile time
       // object adding the values of the fields as the children and setting the
       // type to be the return type of the function body
+      // Now run the constructor to initialise the fields etc.
       if(!construct_object(opt, expression, result))
         return false;
 
-      // Now run the constructor to initialise the fields etc.
       ast_t* dontcare;
-      return evaluate_method(opt, *result, expression, &dontcare);
+      if(!evaluate(opt, *result, method_body, &dontcare))
+        return false;
+      ast_free_unattached(dontcare);
+      return true;
     }
 
     // We cannot evaluate compile-time behaviours, we shouldn't get here as we
     // cannot construct compile-time actors.
     case TK_BEREF:
-      ast_error(opt->check.errors, lhs,
+      ast_error(opt->check.errors, postfix,
                 "cannot evaluate compile-time behaviours");
       return false;
 
@@ -498,7 +503,7 @@ static bool evaluate(pass_opt_t* opt, ast_t* this, ast_t* expression,
     }
 
     case TK_CALL:
-      return evaluate_call(opt, this, expression, result);
+      return evaluate_method(opt, this, expression, result);
 
     case TK_THIS:
     {
