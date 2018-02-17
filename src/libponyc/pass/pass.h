@@ -246,6 +246,7 @@ typedef enum pass_id
     "    =docs\n" \
     "    =refer\n" \
     "    =expr\n" \
+    "    =evaluate\n" \
     "    =verify\n" \
     "    =final\n" \
     "    =serialise\n" \
