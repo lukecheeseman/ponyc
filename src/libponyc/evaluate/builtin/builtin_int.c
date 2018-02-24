@@ -58,11 +58,8 @@ bool int_mul(pass_opt_t* opt, ast_t* receiver, ast_t** args, ast_t** result)
   lexint_t* rhs =  ast_int(rhs_arg);
   if(rhs->high != 0)
   {
-    // FIXME: can only print 64 bit integers with ast_get_rpint
-    // token method for printing should probably be changed then
-    pony_assert(0);
     ast_error(opt->check.errors, rhs_arg,
-      "Value %s is too large for multiplication", ast_get_print(rhs_arg));
+      "Value %s is too large for multiplication", lexint_string(rhs));
     return false;
   }
 
@@ -75,11 +72,8 @@ bool int_div(pass_opt_t* opt, ast_t* receiver, ast_t** args, ast_t** result)
   lexint_t* rhs =  ast_int(rhs_arg);
   if(rhs->high != 0)
   {
-    // FIXME: can only print 64 bit integers with ast_get_rpint
-    // token method for printing should probably be changed then
-    pony_assert(0);
     ast_error(opt->check.errors, rhs_arg,
-      "Value %s is too large for division", ast_get_print(rhs_arg));
+      "Value %s is too large for division", lexint_string(rhs));
     return false;
   }
 
