@@ -4,6 +4,7 @@
 #include "../../type/subtype.h"
 #include "../../../libponyrt/mem/pool.h"
 #include "ponyassert.h"
+#include <string.h>
 
 typedef struct pointer {
   uint64_t size;
@@ -42,8 +43,7 @@ bool pointer_alloc(pass_opt_t* opt, ast_t* receiver, ast_t** args,
 
   lexint_t* size = ast_int(args[0]);
   ast_t** elements = ponyint_pool_alloc_size(sizeof(ast_t*) * (size_t)size->low);
-  for(uint64_t i = 0; i < size->low; ++i)
-    elements[i] = NULL;
+  memset(elements, 0, sizeof(ast_t*) * size->low);
 
   pointer_t* structure = POOL_ALLOC(pointer_t);
   structure->elements = elements;

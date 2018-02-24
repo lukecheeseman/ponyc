@@ -605,8 +605,9 @@ static LLVMValueRef gen_constant_pointer(compile_t* c, ast_t* ast)
 
   // Trim off the unnecessary elements
   uint32_t i = 0;
-  for(; i < ptr_size && ptr_elements[i] != NULL; ++i)
-    elements[i] = gen_expr(c, ptr_elements[i]);
+  for(; i < ptr_size; ++i)
+    elements[i] = ptr_elements[i] != NULL ? gen_expr(c, ptr_elements[i])
+                                          : LLVMConstNull(elem_c_t->use_type);
 
   LLVMValueRef array = LLVMConstArray(elem_c_t->use_type, elements, i);
   LLVMValueRef g_inst = LLVMAddGlobal(c->module, c_t->use_type, obj_name);
