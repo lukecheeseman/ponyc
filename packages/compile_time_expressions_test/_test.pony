@@ -36,6 +36,7 @@ actor Main is TestList
     test(_TestCompileTimeObjectEmbeddedField)
     test(_TestFunctionChaining)
     test(_TestCompileTimePrimitive)
+    test(_TestCompileTimeString)
 
 class iso _TestLiterals is UnitTest
 
@@ -621,3 +622,13 @@ class iso _TestCompileTimePrimitive is UnitTest
     let p3 = # BasicPrimitive
     h.assert_eq[BasicPrimitive](p2, p3)
     h.assert_true(#(p2 == p3))
+
+class iso _TestCompileTimeString is UnitTest
+
+  fun name(): String => "CompileTimeExpression/CompileTimeString"
+
+  fun apply(h: TestHelper) =>
+    let s1: String = # "Hello"
+    h.assert_eq[String](s1, "Hello")
+    let s2: String = # " World"
+    h.assert_eq[String](s2, " World")

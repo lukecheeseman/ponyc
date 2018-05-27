@@ -590,9 +590,6 @@ static LLVMValueRef gen_constant_pointer(compile_t* c, ast_t* ast)
   ast_t* type = ast_type(ast);
   AST_GET_CHILDREN(type, package, id, typeargs);
 
-  reach_type_t* t = reach_type(c->reach, type);
-  compile_type_t* c_t = (compile_type_t*)t->c_type;
-
   reach_type_t* elem_t = reach_type(c->reach, ast_child(typeargs));
   compile_type_t* elem_c_t = (compile_type_t*)elem_t->c_type;
 
@@ -610,7 +607,7 @@ static LLVMValueRef gen_constant_pointer(compile_t* c, ast_t* ast)
                                           : LLVMConstNull(elem_c_t->use_type);
 
   LLVMValueRef array = LLVMConstArray(elem_c_t->use_type, elements, i);
-  LLVMValueRef g_inst = LLVMAddGlobal(c->module, c_t->use_type, obj_name);
+  LLVMValueRef g_inst = LLVMAddGlobal(c->module, LLVMTypeOf(array), obj_name);
   LLVMSetInitializer(g_inst, array);
   LLVMSetGlobalConstant(g_inst, true);
   LLVMSetLinkage(g_inst, LLVMInternalLinkage);

@@ -99,7 +99,6 @@ bool pointer_update(pass_opt_t* opt, ast_t* receiver, ast_t** args,
 bool pointer_offset(pass_opt_t* opt, ast_t* receiver, ast_t** args,
                     ast_t** result)
 {
-  (void) opt;
   pony_assert(is_pointer(ast_type(receiver)));
 
   (void) args;
@@ -125,6 +124,17 @@ bool pointer_unsafe(pass_opt_t* opt, ast_t* receiver, ast_t** args,
   return true;
 }
 
+bool pointer_copy_to(pass_opt_t* opt, ast_t* receiver, ast_t** args,
+                     ast_t** result)
+{
+  (void) opt;
+  pointer_t* this = ast_data(receiver);
+  pointer_t* that = ast_data(args[0]);
+  memcpy(that->elements, this->elements, this->size * sizeof(ast_t*));
+  *result = args[0];
+  return true;
+}
+
 void builtin_pointer_add_methods(pass_opt_t* opt)
 {
   builtin_add(opt, "Pointer", "create", &pointer_create);
@@ -134,5 +144,6 @@ void builtin_pointer_add_methods(pass_opt_t* opt)
   builtin_add(opt, "Pointer", "_update", &pointer_update);
   builtin_add(opt, "Pointer", "_unsafe", &pointer_unsafe);
   builtin_add(opt, "Pointer", "_offset", &pointer_offset);
+  builtin_add(opt, "Pointer", "_copy_to", &pointer_copy_to);
 }
 

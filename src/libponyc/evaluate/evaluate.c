@@ -286,6 +286,13 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* this, ast_t* expression,
   deferred_reify_free(method_def);
   frame_pop(&opt->check);
 
+  // Evaluate this first so that the error messages make sense. If the arguments
+  // are evaluated first then any errors found in the arguments are reported
+  // even trying to evaluated the receiver.
+  ast_t* evaluated_receiver;
+  if(!evaluate(opt, this, receiver, &evaluated_receiver))
+    return false;
+
   // Evaluate all the arguments and assign them to the repsective paramter
   // names, we also build up an array of the arguments in case we're going to
   // call a builtin.
@@ -311,10 +318,6 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* this, ast_t* expression,
   // Lookup to see if we have a builtin method to evaluate the expression
   method_ptr_t builtin_method = builtin_lookup(opt, receiver, receiver_type,
                                                ast_name(method_id));
-
-  ast_t* evaluated_receiver;
-  if(!evaluate(opt, this, receiver, &evaluated_receiver))
-    return false;
 
   if(builtin_method != NULL)
     return builtin_method(opt, evaluated_receiver, evaluated_args, result);
@@ -371,6 +374,12 @@ static bool evaluate_method(pass_opt_t* opt, ast_t* this, ast_t* expression,
   }
 }
 
+#include "../pass/refer.h"
+#include "../expr/call.h"
+#include "../expr/control.h"
+#include "../expr/postfix.h"
+#include "../expr/reference.h"
+
 static bool evaluate(pass_opt_t* opt, ast_t* this, ast_t* expression,
   ast_t** result)
 {
@@ -391,6 +400,60 @@ static bool evaluate(pass_opt_t* opt, ast_t* this, ast_t* expression,
     case TK_ERROR:
       *result = ast_dup(expression);
       return true;
+
+    case TK_STRING:
+    {
+
+      BUILD(ref, expression, NODE(TK_REFERENCE, ID("String")));
+      BUILD(dot, expression, NODE(TK_DOT, TREE(ref) ID("create")));
+
+      size_t size = ast_name_len(expression);
+      ast_t* size_arg = ast_from_int(expression, size);
+      BUILD(size_arg_seq, expression, NODE(TK_SEQ, TREE(size_arg)));
+      ast_settype(size_arg, type_builtin(opt, expression, "USize"));
+      ast_settype(size_arg_seq, type_builtin(opt, expression, "USize"));
+
+      BUILD(call, expression,
+        NODE(TK_CALL,
+          TREE(dot)
+          NODE(TK_POSITIONALARGS, TREE(size_arg_seq))
+          NONE
+          NONE));
+
+      pony_assert(refer_reference(opt, &ref) &&
+                  expr_typeref(opt, &ref) &&
+                  expr_dot(opt, &dot) &&
+                  expr_call(opt, &call));
+
+      ast_swap(expression, call);
+      ast_t** astp = &call;
+
+      const char* string = ast_name(expression);
+      for(size_t i = 0; i < size; ++i)
+      {
+        BUILD(append_chain, expression, NODE(TK_CHAIN, TREE(*astp) ID("push")));
+
+        ast_t* value_arg = ast_from_int(*astp, string[i]);
+        BUILD(value_arg_seq, expression, NODE(TK_SEQ, TREE(value_arg)));
+        ast_settype(value_arg, type_builtin(opt, expression, "U8"));
+        ast_settype(value_arg_seq, type_builtin(opt, expression, "U8"));
+
+        BUILD(append, expression,
+          NODE(TK_CALL,
+            TREE(append_chain)
+            NODE(TK_POSITIONALARGS, TREE(value_arg_seq))
+            NONE
+            NONE));
+
+        ast_replace(astp, append);
+
+        pony_assert(expr_chain(opt, &append_chain));
+        pony_assert(expr_seq(opt, value_arg_seq));
+        pony_assert(expr_call(opt, &append));
+      }
+
+      return evaluate_method(opt, this, *astp, result);
+    }
 
     case TK_TUPLE:
     {
@@ -434,14 +497,6 @@ static bool evaluate(pass_opt_t* opt, ast_t* this, ast_t* expression,
     case TK_TYPEREF:
       *result = expression;
       return true;
-
-    // FIXME:
-    // String literals are a bit special; we want to construct an object with
-    // all of the fields.
-    case TK_STRING:
-    {
-      pony_assert(0);
-    }
 
    // FVARREF may seem unintuitive to add but in fact it's safe due to the deep
    // immutability of val. Once we have constructed a compile-time object it
